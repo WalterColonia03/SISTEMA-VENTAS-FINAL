@@ -1,36 +1,30 @@
 package Vista;
 
+import Conexion.Conexion;
 import Vista.Estilos.UIKit;
-import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.sql.*;
 
-/**
- * IFrmConfiguracionERP - Módulo para configurar los datos de la empresa y credenciales.
- * Rediseñado con UIKit (Patrón E).
- */
 public class IFrmConfiguracionERP extends JInternalFrame {
 
-    // Datos Empresa
     private JTextField txtRazonSocial;
     private JTextField txtRuc;
     private JTextField txtDireccion;
-    private JTextField txtTelefonoEmpresa;
-    private JTextField txtCorreoEmpresa;
-
-    // API Mercado Pago
-    private JPasswordField txtMpToken;
+    private JTextField txtTelefono;
+    private JTextField txtCorreo;
+    private JTextField txtIgv;
+    private JTextField txtStockMinimo;
     private JTextField txtMpPublicKey;
     private JTextField txtMpClientId;
-
+    private JPasswordField txtMpToken;
+    private JButton btnOjoToken;
     private JButton btnGuardar;
     private JButton btnLimpiar;
-    private JButton btnTestMp;
-    private JButton btnOjoToken;
 
     public IFrmConfiguracionERP() {
         super("Configuración Global del ERP", true, true, true, true);
@@ -38,38 +32,34 @@ public class IFrmConfiguracionERP extends JInternalFrame {
         buildLayout();
         attachEvents();
         setSize(960, 600);
-        putClientProperty("JInternalFrame.isPalette", Boolean.FALSE);
+        cargarConfiguracion();
     }
 
     private void initComponents() {
-        // Datos Empresa
         txtRazonSocial = UIKit.textField();
         txtRuc = UIKit.textField();
         txtDireccion = UIKit.textField();
-        txtTelefonoEmpresa = UIKit.textField();
-        txtCorreoEmpresa = UIKit.textField();
+        txtTelefono = UIKit.textField();
+        txtCorreo = UIKit.textField();
+        txtIgv = UIKit.textField();
+        txtIgv.setText("18");
+        txtStockMinimo = UIKit.textField();
+        txtStockMinimo.setText("10");
+        txtMpPublicKey = UIKit.textField();
+        txtMpClientId = UIKit.textField();
 
-        // API Mercado Pago
         txtMpToken = new JPasswordField();
         txtMpToken.setFont(UIKit.BODY);
-        txtMpToken.putClientProperty(FlatClientProperties.STYLE,
-                "arc: 8; borderColor: " + String.format("#%02x%02x%02x", UIKit.BORDER.getRed(), UIKit.BORDER.getGreen(), UIKit.BORDER.getBlue()) +
-                "; focusedBorderColor: " + String.format("#%02x%02x%02x", UIKit.ACCENT.getRed(), UIKit.ACCENT.getGreen(), UIKit.ACCENT.getBlue()) + ";");
         txtMpToken.setPreferredSize(new Dimension(0, 36));
 
-        btnOjoToken = new JButton("👁");
+        btnOjoToken = new JButton("Ver");
         btnOjoToken.setContentAreaFilled(false);
         btnOjoToken.setBorderPainted(false);
         btnOjoToken.setFocusPainted(false);
         btnOjoToken.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        
-        txtMpPublicKey = UIKit.textField();
-        txtMpClientId = UIKit.textField();
 
-        // Botones
         btnGuardar = UIKit.primaryButton("Guardar Configuración");
-        btnLimpiar = UIKit.secondaryButton("Limpiar / Restablecer");
-        btnTestMp = UIKit.secondaryButton("Probar Conexión MP");
+        btnLimpiar = UIKit.secondaryButton("Restablecer");
     }
 
     private void buildLayout() {
@@ -78,155 +68,229 @@ public class IFrmConfiguracionERP extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        // ===== Encabezado =====
         getContentPane().add(
-                UIKit.screenHeader("Configuración", "Administración  ›  Configuración ERP"),
+                UIKit.screenHeader("Configuración ERP", "Administración  ›  Configuración"),
                 BorderLayout.NORTH);
 
         JPanel cuerpo = new JPanel(new GridLayout(1, 2, UIKit.SPACE_LG, 0));
         cuerpo.setOpaque(false);
 
-        // ── Sección 1: Datos de la Empresa ──
+        // ── Panel 1: Datos de la Empresa ──
         JPanel pnlEmpresa = UIKit.card();
         pnlEmpresa.setLayout(new GridBagLayout());
-        
-        GridBagConstraints gbcE = new GridBagConstraints();
-        gbcE.fill = GridBagConstraints.HORIZONTAL;
-        gbcE.weightx = 1.0;
-        
-        gbcE.gridx = 0; gbcE.gridy = 0;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlEmpresa.add(UIKit.sectionHeader("Datos del Establecimiento", null), gbcE);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
 
-        gbcE.gridy = 1;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlEmpresa.add(UIKit.fieldLabel("Razón Social"), gbcE);
-        gbcE.gridy = 2;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlEmpresa.add(txtRazonSocial, gbcE);
+        gbc.gridy = 0;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlEmpresa.add(UIKit.sectionHeader("Datos del Establecimiento", null), gbc);
 
-        gbcE.gridy = 3;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlEmpresa.add(UIKit.fieldLabel("RUC de la Empresa"), gbcE);
-        gbcE.gridy = 4;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlEmpresa.add(txtRuc, gbcE);
+        gbc.gridy = 1;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlEmpresa.add(UIKit.fieldLabel("Razón Social"), gbc);
+        gbc.gridy = 2;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlEmpresa.add(txtRazonSocial, gbc);
 
-        gbcE.gridy = 5;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlEmpresa.add(UIKit.fieldLabel("Dirección Fiscal"), gbcE);
-        gbcE.gridy = 6;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlEmpresa.add(txtDireccion, gbcE);
+        gbc.gridy = 3;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlEmpresa.add(UIKit.fieldLabel("RUC"), gbc);
+        gbc.gridy = 4;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlEmpresa.add(txtRuc, gbc);
 
-        gbcE.gridy = 7;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlEmpresa.add(UIKit.fieldLabel("Teléfono de Contacto"), gbcE);
-        gbcE.gridy = 8;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlEmpresa.add(txtTelefonoEmpresa, gbcE);
+        gbc.gridy = 5;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlEmpresa.add(UIKit.fieldLabel("Dirección"), gbc);
+        gbc.gridy = 6;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlEmpresa.add(txtDireccion, gbc);
 
-        gbcE.gridy = 9;
-        gbcE.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlEmpresa.add(UIKit.fieldLabel("Correo Electrónico"), gbcE);
-        gbcE.gridy = 10;
-        gbcE.weighty = 1.0;
-        gbcE.anchor = GridBagConstraints.NORTH;
-        gbcE.insets = new Insets(0, 0, 0, 0);
-        pnlEmpresa.add(txtCorreoEmpresa, gbcE);
+        gbc.gridy = 7;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlEmpresa.add(UIKit.fieldLabel("Teléfono"), gbc);
+        gbc.gridy = 8;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlEmpresa.add(txtTelefono, gbc);
+
+        gbc.gridy = 9;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlEmpresa.add(UIKit.fieldLabel("Correo"), gbc);
+        gbc.gridy = 10;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlEmpresa.add(txtCorreo, gbc);
+
+        // IGV y Stock Mínimo
+        gbc.gridwidth = 1;
+        gbc.gridy = 11;
+        gbc.gridx = 0;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, UIKit.SPACE_SM);
+        pnlEmpresa.add(UIKit.fieldLabel("IGV (%)"), gbc);
+
+        gbc.gridy = 12;
+        gbc.weighty = 1.0;
+        gbc.anchor = GridBagConstraints.NORTH;
+        gbc.insets = new Insets(0, 0, 0, UIKit.SPACE_SM);
+        pnlEmpresa.add(txtIgv, gbc);
 
         cuerpo.add(pnlEmpresa);
 
-        // ── Sección 2: Configuración Mercado Pago API ──
-        JPanel pnlApi = UIKit.card();
-        pnlApi.setLayout(new GridBagLayout());
-        
-        GridBagConstraints gbcA = new GridBagConstraints();
-        gbcA.fill = GridBagConstraints.HORIZONTAL;
-        gbcA.weightx = 1.0;
+        // ── Panel 2: Configuración Sistema + MP ──
+        JPanel pnlSistema = UIKit.card();
+        pnlSistema.setLayout(new GridBagLayout());
+        GridBagConstraints gbc2 = new GridBagConstraints();
+        gbc2.fill = GridBagConstraints.HORIZONTAL;
+        gbc2.weightx = 1.0;
+        gbc2.gridx = 0;
 
-        gbcA.gridx = 0; gbcA.gridy = 0;
-        gbcA.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlApi.add(UIKit.sectionHeader("Integración Mercado Pago", null), gbcA);
+        gbc2.gridy = 0;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlSistema.add(UIKit.sectionHeader("Configuración del Sistema", null), gbc2);
 
-        gbcA.gridy = 1;
-        gbcA.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlApi.add(UIKit.fieldLabel("Access Token (Production/Sandbox)"), gbcA);
-        
-        gbcA.gridy = 2;
-        gbcA.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        JPanel pnlToken = new JPanel(new BorderLayout());
+        gbc2.gridy = 1;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlSistema.add(UIKit.fieldLabel("Stock Mínimo por Defecto"), gbc2);
+        gbc2.gridy = 2;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_LG, 0);
+        pnlSistema.add(txtStockMinimo, gbc2);
+
+        gbc2.gridy = 3;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlSistema.add(UIKit.sectionHeader("Integración Mercado Pago", null), gbc2);
+
+        gbc2.gridy = 4;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlSistema.add(UIKit.fieldLabel("Access Token"), gbc2);
+        gbc2.gridy = 5;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        JPanel pnlToken = new JPanel(new BorderLayout(4, 0));
         pnlToken.setOpaque(false);
         pnlToken.add(txtMpToken, BorderLayout.CENTER);
         pnlToken.add(btnOjoToken, BorderLayout.EAST);
-        pnlApi.add(pnlToken, gbcA);
+        pnlSistema.add(pnlToken, gbc2);
 
-        gbcA.gridy = 3;
-        gbcA.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlApi.add(UIKit.fieldLabel("Public Key"), gbcA);
-        gbcA.gridy = 4;
-        gbcA.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlApi.add(txtMpPublicKey, gbcA);
+        gbc2.gridy = 6;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlSistema.add(UIKit.fieldLabel("Public Key"), gbc2);
+        gbc2.gridy = 7;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlSistema.add(txtMpPublicKey, gbc2);
 
-        gbcA.gridy = 5;
-        gbcA.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlApi.add(UIKit.fieldLabel("Client ID / POS ID"), gbcA);
-        gbcA.gridy = 6;
-        gbcA.insets = new Insets(0, 0, UIKit.SPACE_LG, 0);
-        pnlApi.add(txtMpClientId, gbcA);
+        gbc2.gridy = 8;
+        gbc2.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlSistema.add(UIKit.fieldLabel("Client ID"), gbc2);
+        gbc2.gridy = 9;
+        gbc2.weighty = 1.0;
+        gbc2.anchor = GridBagConstraints.NORTH;
+        gbc2.insets = new Insets(0, 0, 0, 0);
+        pnlSistema.add(txtMpClientId, gbc2);
 
-        gbcA.gridy = 7;
-        gbcA.fill = GridBagConstraints.NONE;
-        gbcA.anchor = GridBagConstraints.WEST;
-        gbcA.weighty = 1.0;
-        pnlApi.add(btnTestMp, gbcA);
+        cuerpo.add(pnlSistema);
 
-        cuerpo.add(pnlApi);
-
-        // Panel inferior: Botones generales
-        JPanel pnlBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, UIKit.SPACE_SM, 0));
-        pnlBotones.setOpaque(false);
-        pnlBotones.add(btnLimpiar);
-        pnlBotones.add(btnGuardar);
-
-        getContentPane().add(cuerpo, BorderLayout.CENTER);
-        
-        JPanel pnlSur = new JPanel(new BorderLayout());
+        // Botones
+        JPanel pnlSur = new JPanel(new FlowLayout(FlowLayout.RIGHT, UIKit.SPACE_SM, 0));
         pnlSur.setOpaque(false);
         pnlSur.setBorder(new EmptyBorder(UIKit.SPACE_MD, 0, 0, 0));
-        pnlSur.add(pnlBotones, BorderLayout.EAST);
+        pnlSur.add(btnLimpiar);
+        pnlSur.add(btnGuardar);
+
+        getContentPane().add(cuerpo, BorderLayout.CENTER);
         getContentPane().add(pnlSur, BorderLayout.SOUTH);
     }
 
     private void attachEvents() {
-        btnGuardar.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Configuración guardada exitosamente");
-        });
 
+        // GUARDAR
+        btnGuardar.addActionListener(e -> guardarConfiguracion());
+
+        // LIMPIAR
         btnLimpiar.addActionListener(e -> {
             txtRazonSocial.setText("");
             txtRuc.setText("");
             txtDireccion.setText("");
-            txtTelefonoEmpresa.setText("");
-            txtCorreoEmpresa.setText("");
+            txtTelefono.setText("");
+            txtCorreo.setText("");
+            txtIgv.setText("18");
+            txtStockMinimo.setText("10");
             txtMpToken.setText("");
             txtMpPublicKey.setText("");
             txtMpClientId.setText("");
         });
 
-        btnTestMp.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Prueba de conexión con Mercado Pago: OK\nToken verificado.");
-        });
-
+        // VER/OCULTAR TOKEN
         btnOjoToken.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 txtMpToken.setEchoChar((char) 0);
+                btnOjoToken.setText("Ocultar");
             }
+
             @Override
             public void mouseReleased(MouseEvent e) {
                 txtMpToken.setEchoChar('•');
+                btnOjoToken.setText("Ver");
             }
         });
+    }
+
+    private void guardarConfiguracion() {
+        try (Connection con = Conexion.getConexion()) {
+            // Verificar si ya existe un registro
+            PreparedStatement check = con.prepareStatement(
+                    "SELECT COUNT(*) FROM Configuracion");
+            ResultSet rs = check.executeQuery();
+            rs.next();
+            int count = rs.getInt(1);
+
+            String sql;
+            if (count == 0) {
+                sql = "INSERT INTO Configuracion (razonSocial, ruc, direccion, "
+                        + "telefono, correo, igvPorcentaje, mpToken, mpPublicKey, mpClientId) "
+                        + "VALUES (?,?,?,?,?,?,?,?,?)";
+            } else {
+                sql = "UPDATE Configuracion SET razonSocial=?, ruc=?, direccion=?, "
+                        + "telefono=?, correo=?, igvPorcentaje=?, mpToken=?, mpPublicKey=?, "
+                        + "mpClientId=? WHERE idConfig=1";
+            }
+
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, txtRazonSocial.getText().trim());
+                ps.setString(2, txtRuc.getText().trim());
+                ps.setString(3, txtDireccion.getText().trim());
+                ps.setString(4, txtTelefono.getText().trim());
+                ps.setString(5, txtCorreo.getText().trim());
+                ps.setDouble(6, Double.parseDouble(txtIgv.getText().trim().replace(",", ".")));
+                ps.setString(7, new String(txtMpToken.getPassword()).trim());
+                ps.setString(8, txtMpPublicKey.getText().trim());
+                ps.setString(9, txtMpClientId.getText().trim());
+                ps.executeUpdate();
+            }
+
+            JOptionPane.showMessageDialog(this, "✅ Configuración guardada correctamente");
+        } catch (SQLException | NumberFormatException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al guardar configuración");
+        }
+    }
+
+    private void cargarConfiguracion() {
+        try (Connection con = Conexion.getConexion(); PreparedStatement ps = con.prepareStatement(
+                "SELECT * FROM Configuracion LIMIT 1"); ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                txtRazonSocial.setText(rs.getString("razonSocial") != null ? rs.getString("razonSocial") : "");
+                txtRuc.setText(rs.getString("ruc") != null ? rs.getString("ruc") : "");
+                txtDireccion.setText(rs.getString("direccion") != null ? rs.getString("direccion") : "");
+                txtTelefono.setText(rs.getString("telefono") != null ? rs.getString("telefono") : "");
+                txtCorreo.setText(rs.getString("correo") != null ? rs.getString("correo") : "");
+                txtIgv.setText(String.valueOf(rs.getDouble("igvPorcentaje")));
+                txtMpToken.setText(rs.getString("mpToken") != null ? rs.getString("mpToken") : "");
+                txtMpPublicKey.setText(rs.getString("mpPublicKey") != null ? rs.getString("mpPublicKey") : "");
+                txtMpClientId.setText(rs.getString("mpClientId") != null ? rs.getString("mpClientId") : "");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

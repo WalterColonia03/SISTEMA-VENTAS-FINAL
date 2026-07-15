@@ -1,9 +1,15 @@
 package Vista;
 
+import Clases.Producto;
+import DAO.KardexDAO;
+import DAO.ProductoDAO;
+import Vista.Estilos.UIKit;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
 public class IFrmKardex extends JInternalFrame {
 
@@ -13,111 +19,174 @@ public class IFrmKardex extends JInternalFrame {
     private JLabel lblStockActual;
     private JLabel lblEntradas;
     private JLabel lblSalidas;
-
     private JButton btnRefrescar;
 
-    private static final Color COLOR_PRIMARY = new Color(25, 118, 210);
-    private static final Color COLOR_ACCENT = new Color(46, 125, 50);
+    private List<Producto> listaProductos;
 
     public IFrmKardex() {
-        super("Kardex - Historial de Entradas y Salidas", true, true, true, true);
+        super("Kardex - Historial de Movimientos", true, true, true, true);
         initComponents();
         buildLayout();
         attachEvents();
-        setSize(850, 550);
+        setSize(900, 580);
     }
 
     private void initComponents() {
-        cbProducto = new JComboBox<>(new String[]{"Seleccione un producto", "Leche Gloria 1L", "Arroz Coste\u00f1o 5kg", "Aceite Primor 1L"});
-        btnRefrescar = new JButton("Refrescar");
-        btnRefrescar.setBackground(COLOR_PRIMARY);
-        btnRefrescar.setForeground(Color.WHITE);
+        cbProducto = new JComboBox<>();
+        cbProducto.setFont(UIKit.BODY);
+        cbProducto.setPreferredSize(new Dimension(250, 36));
+        cargarProductos();
+
+        btnRefrescar = UIKit.secondaryButton("Refrescar");
 
         lblStockActual = new JLabel("0");
-        lblStockActual.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblStockActual.setForeground(COLOR_PRIMARY);
+        lblStockActual.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblStockActual.setForeground(UIKit.PRIMARY);
 
         lblEntradas = new JLabel("0");
-        lblEntradas.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblEntradas.setForeground(COLOR_ACCENT);
+        lblEntradas.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblEntradas.setForeground(new Color(46, 125, 50));
 
         lblSalidas = new JLabel("0");
-        lblSalidas.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblSalidas.setFont(new Font("Segoe UI", Font.BOLD, 20));
         lblSalidas.setForeground(new Color(198, 40, 40));
 
-        String[] columns = {"Fecha", "Tipo", "Cantidad", "Stock Despu\u00e9s", "Documento", "Observaci\u00f3n"};
+        String[] columns = {"Fecha", "Tipo", "Cantidad", "Stock Resultante", "Referencia"};
         modelKardex = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
-        tblKardex = new JTable(modelKardex);
+        tblKardex = UIKit.styledTable(modelKardex);
+    }
+
+    private void cargarProductos() {
+        cbProducto.removeAllItems();
+        cbProducto.addItem("-- Seleccione un producto --");
+        ProductoDAO dao = new ProductoDAO();
+        listaProductos = dao.listar();
+        for (Producto p : listaProductos) {
+            cbProducto.addItem(p.getIdProducto() + " - " + p.getNombre());
+        }
     }
 
     private void buildLayout() {
-        setLayout(new BorderLayout(10, 10));
-        ((JPanel) getContentPane()).setBorder(new EmptyBorder(15, 15, 15, 15));
+        getContentPane().setLayout(new BorderLayout());
+        getContentPane().setBackground(UIKit.BG_APP);
+        ((JComponent) getContentPane()).setBorder(new EmptyBorder(
+                UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        JPanel pnlTop = new JPanel(new BorderLayout(10, 10));
-        pnlTop.setBorder(BorderFactory.createTitledBorder("Seleccionar Producto"));
+        getContentPane().add(
+                UIKit.screenHeader("Kardex", "Inventario  ›  Kardex"),
+                BorderLayout.NORTH);
 
-        JPanel pnlSelector = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        pnlSelector.add(new JLabel("Producto:"));
+        JPanel cuerpo = new JPanel(new BorderLayout(0, UIKit.SPACE_MD));
+        cuerpo.setOpaque(false);
+
+        // ── Panel superior: selector + KPIs ──
+        JPanel pnlTop = UIKit.card();
+        pnlTop.setLayout(new BorderLayout(UIKit.SPACE_LG, 0));
+
+        // Selector de producto
+        JPanel pnlSelector = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        pnlSelector.setOpaque(false);
+        pnlSelector.add(UIKit.fieldLabel("Producto:"));
         pnlSelector.add(cbProducto);
         pnlSelector.add(btnRefrescar);
         pnlTop.add(pnlSelector, BorderLayout.WEST);
 
-        JPanel pnlResumen = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 5));
-        pnlResumen.setBorder(new EmptyBorder(5, 0, 5, 0));
+        // KPIs
+        JPanel pnlKpis = new JPanel(new FlowLayout(FlowLayout.RIGHT, UIKit.SPACE_MD, 0));
+        pnlKpis.setOpaque(false);
+        pnlKpis.add(crearKpi("Stock Actual", lblStockActual, new Color(232, 240, 254)));
+        pnlKpis.add(crearKpi("Entradas", lblEntradas, new Color(232, 245, 233)));
+        pnlKpis.add(crearKpi("Salidas", lblSalidas, new Color(255, 235, 238)));
+        pnlTop.add(pnlKpis, BorderLayout.CENTER);
 
-        JPanel pnlStock = new JPanel(new GridBagLayout());
-        pnlStock.setBackground(new Color(232, 240, 254));
-        pnlStock.setBorder(BorderFactory.createLineBorder(new Color(187, 222, 251)));
-        pnlStock.setPreferredSize(new Dimension(150, 60));
+        cuerpo.add(pnlTop, BorderLayout.NORTH);
+
+        // ── Tabla de movimientos ──
+        JPanel pnlTabla = UIKit.card();
+        pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
+        pnlTabla.add(UIKit.sectionHeader("Movimientos del Producto", null), BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(tblKardex);
+        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
+        pnlTabla.add(scroll, BorderLayout.CENTER);
+
+        cuerpo.add(pnlTabla, BorderLayout.CENTER);
+        getContentPane().add(cuerpo, BorderLayout.CENTER);
+    }
+
+    private JPanel crearKpi(String titulo, JLabel lblValor, Color bgColor) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(bgColor);
+        panel.setBorder(BorderFactory.createLineBorder(bgColor.darker()));
+        panel.setPreferredSize(new Dimension(140, 65));
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0; gbc.gridy = 0;
-        pnlStock.add(new JLabel("Stock Actual"), gbc);
-        gbc.gridy = 1;
-        pnlStock.add(lblStockActual, gbc);
+        gbc.gridx = 0;
 
-        JPanel pnlEntradas = new JPanel(new GridBagLayout());
-        pnlEntradas.setBackground(new Color(232, 245, 233));
-        pnlEntradas.setBorder(BorderFactory.createLineBorder(new Color(200, 230, 201)));
-        pnlEntradas.setPreferredSize(new Dimension(150, 60));
         gbc.gridy = 0;
-        pnlEntradas.add(new JLabel("Entradas"), gbc);
+        JLabel lblTitulo = new JLabel(titulo);
+        lblTitulo.setFont(UIKit.CAPTION);
+        panel.add(lblTitulo, gbc);
+
         gbc.gridy = 1;
-        pnlEntradas.add(lblEntradas, gbc);
+        panel.add(lblValor, gbc);
 
-        JPanel pnlSalidas = new JPanel(new GridBagLayout());
-        pnlSalidas.setBackground(new Color(255, 235, 238));
-        pnlSalidas.setBorder(BorderFactory.createLineBorder(new Color(255, 205, 210)));
-        pnlSalidas.setPreferredSize(new Dimension(150, 60));
-        gbc.gridy = 0;
-        pnlSalidas.add(new JLabel("Salidas"), gbc);
-        gbc.gridy = 1;
-        pnlSalidas.add(lblSalidas, gbc);
-
-        pnlResumen.add(pnlStock);
-        pnlResumen.add(pnlEntradas);
-        pnlResumen.add(pnlSalidas);
-
-        pnlTop.add(pnlResumen, BorderLayout.CENTER);
-
-        add(pnlTop, BorderLayout.NORTH);
-
-        JPanel pnlTabla = new JPanel(new BorderLayout());
-        pnlTabla.setBorder(BorderFactory.createTitledBorder("Movimientos del Producto"));
-        pnlTabla.add(new JScrollPane(tblKardex), BorderLayout.CENTER);
-        add(pnlTabla, BorderLayout.CENTER);
+        return panel;
     }
 
     private void attachEvents() {
-        btnRefrescar.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para cargar movimientos del kardex del producto seleccionado
-            // Leer productos.txt y ventas.txt para calcular entradas/salidas
+
+        // Al seleccionar producto cargar automáticamente
+        cbProducto.addActionListener(e -> {
+            if (cbProducto.getSelectedIndex() > 0) {
+                cargarKardex();
+            } else {
+                modelKardex.setRowCount(0);
+                lblStockActual.setText("0");
+                lblEntradas.setText("0");
+                lblSalidas.setText("0");
+            }
         });
 
-        cbProducto.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para precargar datos al seleccionar producto
+        // Refrescar
+        btnRefrescar.addActionListener(e -> {
+            cargarProductos();
+            modelKardex.setRowCount(0);
+            lblStockActual.setText("0");
+            lblEntradas.setText("0");
+            lblSalidas.setText("0");
         });
+    }
+
+    private void cargarKardex() {
+        int idx = cbProducto.getSelectedIndex() - 1;
+        if (idx < 0 || listaProductos == null) return;
+
+        int idProducto = listaProductos.get(idx).getIdProducto();
+        int stockActual = listaProductos.get(idx).getCantidad();
+
+        // Cargar movimientos
+        modelKardex.setRowCount(0);
+        KardexDAO dao = new KardexDAO();
+        List<Object[]> movimientos = dao.listarPorProducto(idProducto);
+
+        for (Object[] mov : movimientos) {
+            String tipo = mov[1].toString();
+            modelKardex.addRow(new Object[]{
+                mov[0],  // fecha
+                tipo,
+                mov[2],  // cantidad
+                mov[3],  // stockActual
+                mov[4]   // referencia
+            });
+        }
+
+        // Actualizar KPIs
+        int[] totales = dao.getTotales(idProducto);
+        lblStockActual.setText(String.valueOf(stockActual));
+        lblEntradas.setText(String.valueOf(totales[0]));
+        lblSalidas.setText(String.valueOf(totales[1]));
     }
 }

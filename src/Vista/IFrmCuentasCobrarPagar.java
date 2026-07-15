@@ -1,134 +1,92 @@
 package Vista;
 
+import DAO.CuentasCobrarPagarDAO;
 import Vista.Estilos.UIKit;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
 public class IFrmCuentasCobrarPagar extends JInternalFrame {
 
-    private JTabbedPane tabbedPane;
-
-    // Cuentas por Cobrar
-    private JTable tblCobrar;
-    private DefaultTableModel modelCobrar;
-    private JTextField txtBuscarCobrar;
-    private JButton btnBuscarCobrar;
-    private JButton btnRegistrarCobro;
-    private JButton btnMarcarPagadoCobrar;
-
-    // Cuentas por Pagar
     private JTable tblPagar;
     private DefaultTableModel modelPagar;
-    private JTextField txtBuscarPagar;
-    private JButton btnBuscarPagar;
-    private JButton btnRegistrarPago;
-    private JButton btnMarcarPagadoPagar;
-
-    private String valTotalCobrar = "S/ 520.00";
-    private String valTotalPagar = "S/ 1,450.00";
-    private String valDiferencia = "S/ -930.00";
+    private JTextField txtBuscar;
+    private JButton btnBuscar;
+    private JButton btnMarcarPagado;
+    private JButton btnRefrescar;
+    private JLabel lblTotalPagar;
+    private int idCuentaSeleccionada = -1;
 
     public IFrmCuentasCobrarPagar() {
-        super("Cuentas por Cobrar y Pagar", true, true, true, true);
+        super("Cuentas por Pagar", true, true, true, true);
         initComponents();
         buildLayout();
         attachEvents();
-        setSize(960, 600);
-        putClientProperty("JInternalFrame.isPalette", Boolean.FALSE);
+        setSize(1000, 620);
+        cargarDatos();
     }
 
     private void initComponents() {
-        // ── Cuentas por Cobrar ──
-        txtBuscarCobrar = UIKit.textField();
-        btnBuscarCobrar = UIKit.secondaryButton("Buscar");
-        btnRegistrarCobro = UIKit.primaryButton("+ Nuevo Crédito / Cobro");
-        btnMarcarPagadoCobrar = UIKit.secondaryButton("Marcar como Pagado");
+        lblTotalPagar = new JLabel("S/ 0.00");
+        lblTotalPagar.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTotalPagar.setForeground(UIKit.DANGER);
 
-        String[] colsCobrar = {"ID", "Cliente", "Documento", "Monto Total", "Saldo Pendiente", "Emisión", "Vencimiento", "Estado"};
-        modelCobrar = new DefaultTableModel(colsCobrar, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
-        };
-        tblCobrar = UIKit.styledTable(modelCobrar);
+        txtBuscar = UIKit.textField();
+        txtBuscar.setPreferredSize(new Dimension(200, 36));
+        txtBuscar.putClientProperty("JTextField.placeholderText", "Buscar proveedor...");
 
-        // ── Cuentas por Pagar ──
-        txtBuscarPagar = UIKit.textField();
-        btnBuscarPagar = UIKit.secondaryButton("Buscar");
-        btnRegistrarPago = UIKit.primaryButton("+ Nueva Deuda / Pago");
-        btnMarcarPagadoPagar = UIKit.secondaryButton("Marcar como Pagado");
+        btnBuscar       = UIKit.secondaryButton("Buscar");
+        btnRefrescar    = UIKit.secondaryButton("Refrescar");
+        btnMarcarPagado = UIKit.primaryButton("Marcar como Pagado");
 
-        String[] colsPagar = {"ID", "Proveedor", "Documento", "Monto Total", "Saldo Pendiente", "Emisión", "Vencimiento", "Estado"};
-        modelPagar = new DefaultTableModel(colsPagar, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
+        String[] cols = {"ID", "Proveedor", "N° Doc", "Monto Total",
+                         "Saldo Pendiente", "Emisión", "Vencimiento",
+                         "Condición", "Estado"};
+        modelPagar = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tblPagar = UIKit.styledTable(modelPagar);
 
-        // Datos de ejemplo
-        modelCobrar.addRow(new Object[]{"1", "Juan Pérez", "FV-001", "S/ 500.00", "S/ 200.00", "2025-05-01", "2025-06-01", "Pendiente"});
-        modelCobrar.addRow(new Object[]{"2", "María López", "FV-002", "S/ 320.00", "S/ 320.00", "2025-05-15", "2025-06-15", "Pendiente"});
+        // Colorear estado
+        tblPagar.getColumnModel().getColumn(8).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int col) {
+                Component c = super.getTableCellRendererComponent(
+                        table, value, isSelected, hasFocus, row, col);
+                if (!isSelected && value != null) {
+                    if (value.toString().equals("Pagado")) {
+                        c.setForeground(UIKit.SUCCESS);
+                        ((JLabel)c).setFont(UIKit.BODY_BOLD);
+                    } else {
+                        c.setForeground(UIKit.DANGER);
+                        ((JLabel)c).setFont(UIKit.BODY_BOLD);
+                    }
+                }
+                return c;
+            }
+        });
 
-        modelPagar.addRow(new Object[]{"1", "Distribuidora del Sur", "FC-001", "S/ 1,200.00", "S/ 600.00", "2025-04-20", "2025-05-20", "Parcial"});
-        modelPagar.addRow(new Object[]{"2", "Grupo Alimenticio SAC", "FC-002", "S/ 850.00", "S/ 850.00", "2025-05-10", "2025-06-10", "Pendiente"});
-    }
-
-    private JPanel buildPanelCobrar() {
-        JPanel pnl = new JPanel(new BorderLayout(0, UIKit.SPACE_MD));
-        pnl.setOpaque(false);
-
-        JPanel pnlAcciones = new JPanel(new BorderLayout());
-        pnlAcciones.setOpaque(false);
-        
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
-        pnlBusqueda.setOpaque(false);
-        pnlBusqueda.add(txtBuscarCobrar);
-        pnlBusqueda.add(btnBuscarCobrar);
-        
-        JPanel pnlBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, UIKit.SPACE_SM, 0));
-        pnlBotones.setOpaque(false);
-        pnlBotones.add(btnMarcarPagadoCobrar);
-        pnlBotones.add(btnRegistrarCobro);
-        
-        pnlAcciones.add(pnlBusqueda, BorderLayout.WEST);
-        pnlAcciones.add(pnlBotones, BorderLayout.EAST);
-
-        pnl.add(pnlAcciones, BorderLayout.NORTH);
-        
-        JScrollPane scroll = new JScrollPane(tblCobrar);
-        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnl.add(scroll, BorderLayout.CENTER);
-
-        return pnl;
-    }
-
-    private JPanel buildPanelPagar() {
-        JPanel pnl = new JPanel(new BorderLayout(0, UIKit.SPACE_MD));
-        pnl.setOpaque(false);
-
-        JPanel pnlAcciones = new JPanel(new BorderLayout());
-        pnlAcciones.setOpaque(false);
-        
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
-        pnlBusqueda.setOpaque(false);
-        pnlBusqueda.add(txtBuscarPagar);
-        pnlBusqueda.add(btnBuscarPagar);
-        
-        JPanel pnlBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, UIKit.SPACE_SM, 0));
-        pnlBotones.setOpaque(false);
-        pnlBotones.add(btnMarcarPagadoPagar);
-        pnlBotones.add(btnRegistrarPago);
-        
-        pnlAcciones.add(pnlBusqueda, BorderLayout.WEST);
-        pnlAcciones.add(pnlBotones, BorderLayout.EAST);
-
-        pnl.add(pnlAcciones, BorderLayout.NORTH);
-        
-        JScrollPane scroll = new JScrollPane(tblPagar);
-        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnl.add(scroll, BorderLayout.CENTER);
-
-        return pnl;
+        // Colorear condición
+        tblPagar.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int col) {
+                Component c = super.getTableCellRendererComponent(
+                        table, value, isSelected, hasFocus, row, col);
+                if (!isSelected && value != null) {
+                    if (value.toString().equals("Contado")) {
+                        c.setForeground(UIKit.SUCCESS);
+                    } else {
+                        c.setForeground(UIKit.WARNING);
+                    }
+                }
+                return c;
+            }
+        });
     }
 
     private void buildLayout() {
@@ -137,68 +95,130 @@ public class IFrmCuentasCobrarPagar extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        // ===== Encabezado =====
         getContentPane().add(
-                UIKit.screenHeader("Cuentas por Cobrar y Pagar", "Finanzas  ›  Cuentas por Cobrar y Pagar"),
+                UIKit.screenHeader("Cuentas por Pagar", "Finanzas  ›  Cuentas por Pagar"),
                 BorderLayout.NORTH);
 
-        JPanel cuerpo = new JPanel(new BorderLayout(0, UIKit.SPACE_LG));
+        JPanel cuerpo = new JPanel(new BorderLayout(0, UIKit.SPACE_MD));
         cuerpo.setOpaque(false);
 
-        // Tarjetas KPI
-        JPanel pnlCards = new JPanel(new GridLayout(1, 3, UIKit.SPACE_MD, 0));
-        pnlCards.setOpaque(false);
-        pnlCards.add(UIKit.kpiCard("Total por Cobrar", valTotalCobrar, "Cuentas pendientes", UIKit.SUCCESS));
-        pnlCards.add(UIKit.kpiCard("Total por Pagar", valTotalPagar, "Deudas pendientes", UIKit.DANGER));
-        pnlCards.add(UIKit.kpiCard("Diferencia", valDiferencia, "Por cobrar - Por pagar", UIKit.PRIMARY));
-        
-        cuerpo.add(pnlCards, BorderLayout.NORTH);
+        // KPI
+        JPanel pnlKpi = new JPanel(new GridLayout(1, 3, UIKit.SPACE_MD, 0));
+        pnlKpi.setOpaque(false);
+        pnlKpi.setPreferredSize(new Dimension(0, 85));
 
-        // Tarjeta Central con TabbedPane
-        JPanel pnlCentral = UIKit.card();
-        pnlCentral.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
-        
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(UIKit.BODY);
-        tabbedPane.addTab("Cuentas por Cobrar", buildPanelCobrar());
-        tabbedPane.addTab("Cuentas por Pagar", buildPanelPagar());
-        
-        pnlCentral.add(tabbedPane, BorderLayout.CENTER);
+        JPanel cardPagar = UIKit.card();
+        cardPagar.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1;
+        JLabel lblTit = new JLabel("TOTAL DEUDAS PENDIENTES");
+        lblTit.setFont(UIKit.CAPTION); lblTit.setForeground(UIKit.TEXT_SECONDARY);
+        gbc.gridy = 0; gbc.insets = new Insets(10, 12, 2, 12); cardPagar.add(lblTit, gbc);
+        gbc.gridy = 1; gbc.insets = new Insets(0, 12, 2, 12); cardPagar.add(lblTotalPagar, gbc);
+        JLabel lblSub = new JLabel("Con proveedores");
+        lblSub.setFont(UIKit.CAPTION); lblSub.setForeground(UIKit.TEXT_SECONDARY);
+        gbc.gridy = 2; gbc.insets = new Insets(0, 12, 10, 12); cardPagar.add(lblSub, gbc);
+        pnlKpi.add(cardPagar);
 
-        cuerpo.add(pnlCentral, BorderLayout.CENTER);
+        // Panel vacío para ocupar espacio
+        JPanel vacío1 = new JPanel(); vacío1.setOpaque(false); pnlKpi.add(vacío1);
+        JPanel vacío2 = new JPanel(); vacío2.setOpaque(false); pnlKpi.add(vacío2);
 
+        cuerpo.add(pnlKpi, BorderLayout.NORTH);
+
+        // Tabla
+        JPanel pnlTabla = UIKit.card();
+        pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
+        pnlTabla.add(UIKit.sectionHeader("Deudas con Proveedores", null), BorderLayout.NORTH);
+
+        JPanel pnlAcciones = new JPanel(new BorderLayout());
+        pnlAcciones.setOpaque(false);
+
+        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        pnlBusqueda.setOpaque(false);
+        pnlBusqueda.add(txtBuscar);
+        pnlBusqueda.add(btnBuscar);
+        pnlBusqueda.add(btnRefrescar);
+
+        JPanel pnlBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, UIKit.SPACE_SM, 0));
+        pnlBotones.setOpaque(false);
+        pnlBotones.add(btnMarcarPagado);
+
+        pnlAcciones.add(pnlBusqueda, BorderLayout.WEST);
+        pnlAcciones.add(pnlBotones, BorderLayout.EAST);
+
+        JPanel pnlInner = new JPanel(new BorderLayout(0, UIKit.SPACE_SM));
+        pnlInner.setOpaque(false);
+        pnlInner.add(pnlAcciones, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(tblPagar);
+        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
+        pnlInner.add(scroll, BorderLayout.CENTER);
+
+        pnlTabla.add(pnlInner, BorderLayout.CENTER);
+        cuerpo.add(pnlTabla, BorderLayout.CENTER);
         getContentPane().add(cuerpo, BorderLayout.CENTER);
     }
 
     private void attachEvents() {
-        btnBuscarCobrar.addActionListener(e -> {
-            // TODO: lógica TXT para filtrar cuentas por cobrar por cliente en cuentas_cobrar.txt
-        });
-
-        btnRegistrarCobro.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Formulario para nuevo crédito (próximamente).");
-        });
-
-        btnMarcarPagadoCobrar.addActionListener(e -> {
-            int row = tblCobrar.getSelectedRow();
-            if (row != -1) {
-                JOptionPane.showMessageDialog(this, "Cobro marcado como pagado.");
+        btnBuscar.addActionListener(e -> {
+            String texto = txtBuscar.getText().trim().toLowerCase();
+            modelPagar.setRowCount(0);
+            for (Object[] row : new CuentasCobrarPagarDAO().listarPagar()) {
+                if (row[1].toString().toLowerCase().contains(texto))
+                    modelPagar.addRow(row);
             }
         });
 
-        btnBuscarPagar.addActionListener(e -> {
-            // TODO: lógica TXT para filtrar cuentas por pagar por proveedor en cuentas_pagar.txt
+        btnRefrescar.addActionListener(e -> {
+            txtBuscar.setText("");
+            cargarDatos();
         });
 
-        btnRegistrarPago.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Formulario para nueva deuda (próximamente).");
-        });
+        btnMarcarPagado.addActionListener(e -> {
+            if (idCuentaSeleccionada == -1) {
+                JOptionPane.showMessageDialog(this, "Seleccione una cuenta pendiente");
+                return;
+            }
 
-        btnMarcarPagadoPagar.addActionListener(e -> {
+            // Verificar que no esté ya pagada
             int row = tblPagar.getSelectedRow();
-            if (row != -1) {
-                JOptionPane.showMessageDialog(this, "Pago marcado como pagado.");
+            String estado = modelPagar.getValueAt(row, 8).toString();
+            if (estado.equals("Pagado")) {
+                JOptionPane.showMessageDialog(this, "Esta cuenta ya fue pagada");
+                return;
+            }
+
+            int op = JOptionPane.showConfirmDialog(this,
+                "¿Confirmar pago de esta deuda?\n\n" +
+                "Proveedor: " + modelPagar.getValueAt(row, 1) + "\n" +
+                "Monto: " + modelPagar.getValueAt(row, 3) + "\n" +
+                "Condición: " + modelPagar.getValueAt(row, 7),
+                "Confirmar Pago", JOptionPane.YES_NO_OPTION);
+
+            if (op != JOptionPane.YES_OPTION) return;
+
+            CuentasCobrarPagarDAO dao = new CuentasCobrarPagarDAO();
+            if (dao.marcarPagado(idCuentaSeleccionada)) {
+                JOptionPane.showMessageDialog(this, "Deuda marcada como pagada correctamente");
+                idCuentaSeleccionada = -1;
+                cargarDatos();
             }
         });
+
+        tblPagar.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && tblPagar.getSelectedRow() != -1) {
+                idCuentaSeleccionada = Integer.parseInt(
+                    modelPagar.getValueAt(tblPagar.getSelectedRow(), 0).toString());
+            }
+        });
+    }
+
+    private void cargarDatos() {
+        modelPagar.setRowCount(0);
+        CuentasCobrarPagarDAO dao = new CuentasCobrarPagarDAO();
+        for (Object[] row : dao.listarPagar()) modelPagar.addRow(row);
+        lblTotalPagar.setText(String.format("S/ %.2f", dao.getTotalPagar()));
+        idCuentaSeleccionada = -1;
     }
 }

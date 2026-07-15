@@ -1,9 +1,14 @@
 package Vista;
 
+import Conexion.Conexion;
+import Vista.Estilos.UIKit;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.sql.*;
+import java.time.LocalDate;
 
 public class IFrmLibroMayor extends JInternalFrame {
 
@@ -12,161 +17,324 @@ public class IFrmLibroMayor extends JInternalFrame {
     private JTextField txtFechaFin;
     private JButton btnFiltrar;
     private JButton btnRefrescar;
+    private JButton btnNuevoAsiento;
 
     private JTable tblAsientos;
     private DefaultTableModel modelAsientos;
 
-    private JLabel lblSaldoAnterior;
     private JLabel lblDebeTotal;
     private JLabel lblHaberTotal;
     private JLabel lblSaldoActual;
 
-    private static final Color COLOR_PRIMARY = new Color(25, 118, 210);
-    private static final Color COLOR_ACCENT = new Color(46, 125, 50);
-
     public IFrmLibroMayor() {
-        super("Libro Mayor - Visualizaci\u00f3n de Asientos Contables", true, true, true, true);
+        super("Libro Mayor", true, true, true, true);
         initComponents();
         buildLayout();
         attachEvents();
         setSize(1000, 620);
+        cargarAsientos();
     }
 
     private void initComponents() {
         cbCuentaContable = new JComboBox<>(new String[]{
             "Todas las Cuentas",
-            "Efectivo y Equivalentes (101)",
-            "Mercader\u00edas (201)",
-            "Cuentas por Cobrar (121)",
-            "Cuentas por Pagar (421)",
-            "Capital (501)",
-            "Ventas (701)",
-            "Compras (601)",
-            "Gastos Administrativos (941)",
-            "IGV por Pagar (4011)"
+            "101 Efectivo y Equivalentes",
+            "201 Mercaderías",
+            "121 Cuentas por Cobrar",
+            "421 Cuentas por Pagar",
+            "501 Capital",
+            "701 Ventas",
+            "601 Compras",
+            "941 Gastos Administrativos",
+            "4011 IGV por Pagar"
         });
-        txtFechaInicio = new JTextField(10);
-        txtFechaFin = new JTextField(10);
-        btnFiltrar = new JButton("Filtrar");
-        btnFiltrar.setBackground(COLOR_PRIMARY);
-        btnFiltrar.setForeground(Color.WHITE);
-        btnRefrescar = new JButton("Refrescar");
-        btnRefrescar.setBackground(new Color(96, 125, 139));
-        btnRefrescar.setForeground(Color.WHITE);
+        cbCuentaContable.setFont(UIKit.BODY);
+        cbCuentaContable.setPreferredSize(new Dimension(220, 36));
 
-        String[] columns = {"Fecha", "Glosa", "Cuenta Debe", "Cuenta Haber", "Debe (S/)", "Haber (S/)", "Nro Asiento"};
+        txtFechaInicio = UIKit.textField();
+        txtFechaInicio.setText(LocalDate.now().withDayOfMonth(1).toString());
+        txtFechaInicio.setPreferredSize(new Dimension(130, 36));
+
+        txtFechaFin = UIKit.textField();
+        txtFechaFin.setText(LocalDate.now().toString());
+        txtFechaFin.setPreferredSize(new Dimension(130, 36));
+
+        btnFiltrar = UIKit.secondaryButton("Filtrar");
+        btnRefrescar = UIKit.secondaryButton("Refrescar");
+        btnNuevoAsiento = UIKit.primaryButton("+ Nuevo Asiento");
+
+        String[] columns = {"Fecha", "Glosa", "Cuenta Debe", "Cuenta Haber", "Debe (S/)", "Haber (S/)", "N° Asiento"};
         modelAsientos = new DefaultTableModel(columns, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
         };
-        tblAsientos = new JTable(modelAsientos);
+        tblAsientos = UIKit.styledTable(modelAsientos);
 
-        lblSaldoAnterior = new JLabel("S/ 0.00");
-        lblSaldoAnterior.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblDebeTotal = new JLabel("S/ 0.00");
-        lblDebeTotal.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblDebeTotal.setForeground(COLOR_ACCENT);
+        lblDebeTotal.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblDebeTotal.setForeground(UIKit.SUCCESS);
+
         lblHaberTotal = new JLabel("S/ 0.00");
-        lblHaberTotal.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblHaberTotal.setForeground(new Color(198, 40, 40));
+        lblHaberTotal.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblHaberTotal.setForeground(UIKit.DANGER);
+
         lblSaldoActual = new JLabel("S/ 0.00");
         lblSaldoActual.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblSaldoActual.setForeground(COLOR_PRIMARY);
-
-        // Datos de ejemplo
-        modelAsientos.addRow(new Object[]{"2025-06-01", "Venta al contado", "101 Efectivo", "701 Ventas", "1,200.00", "0.00", "ASC-001"});
-        modelAsientos.addRow(new Object[]{"2025-06-01", "Venta al contado", "701 Ventas", "101 Efectivo", "0.00", "1,200.00", "ASC-001"});
-        modelAsientos.addRow(new Object[]{"2025-06-02", "Compra mercader\u00eda", "601 Compras", "421 Ctas Pagar", "850.00", "0.00", "ASC-002"});
-        modelAsientos.addRow(new Object[]{"2025-06-02", "Compra mercader\u00eda", "421 Ctas Pagar", "601 Compras", "0.00", "850.00", "ASC-002"});
-        modelAsientos.addRow(new Object[]{"2025-06-03", "Pago a proveedor", "421 Ctas Pagar", "101 Efectivo", "850.00", "0.00", "ASC-003"});
-        modelAsientos.addRow(new Object[]{"2025-06-03", "Pago a proveedor", "101 Efectivo", "421 Ctas Pagar", "0.00", "850.00", "ASC-003"});
-
-        lblDebeTotal.setText("S/ 2,900.00");
-        lblHaberTotal.setText("S/ 2,900.00");
-        lblSaldoActual.setText("S/ 0.00");
+        lblSaldoActual.setForeground(UIKit.PRIMARY);
     }
 
     private void buildLayout() {
-        setLayout(new BorderLayout(10, 10));
-        ((JPanel) getContentPane()).setBorder(new EmptyBorder(15, 15, 15, 15));
+        getContentPane().setLayout(new BorderLayout());
+        getContentPane().setBackground(UIKit.BG_APP);
+        ((JComponent) getContentPane()).setBorder(new EmptyBorder(
+                UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        JPanel pnlFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        pnlFiltros.setBorder(BorderFactory.createTitledBorder("Filtros Contables"));
-        pnlFiltros.add(new JLabel("Cuenta Contable:"));
+        getContentPane().add(
+                UIKit.screenHeader("Libro Mayor", "Finanzas  ›  Libro Mayor"),
+                BorderLayout.NORTH);
+
+        JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
+        cuerpo.setOpaque(false);
+
+        // Tabla
+        JPanel pnlTabla = UIKit.card();
+        pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
+
+        JPanel pnlFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        pnlFiltros.setOpaque(false);
+        pnlFiltros.add(UIKit.fieldLabel("Cuenta:"));
         pnlFiltros.add(cbCuentaContable);
-        pnlFiltros.add(new JLabel("Fecha Inicio:"));
+        pnlFiltros.add(UIKit.fieldLabel("Desde:"));
         pnlFiltros.add(txtFechaInicio);
-        pnlFiltros.add(new JLabel("Fecha Fin:"));
+        pnlFiltros.add(UIKit.fieldLabel("Hasta:"));
         pnlFiltros.add(txtFechaFin);
         pnlFiltros.add(btnFiltrar);
         pnlFiltros.add(btnRefrescar);
-        add(pnlFiltros, BorderLayout.NORTH);
+        pnlFiltros.add(btnNuevoAsiento);
 
-        JPanel pnlCentral = new JPanel(new BorderLayout(10, 10));
+        JPanel pnlTopTabla = new JPanel(new BorderLayout(0, UIKit.SPACE_SM));
+        pnlTopTabla.setOpaque(false);
+        pnlTopTabla.add(UIKit.sectionHeader("Asientos Contables", null), BorderLayout.NORTH);
+        pnlTopTabla.add(pnlFiltros, BorderLayout.CENTER);
+        pnlTabla.add(pnlTopTabla, BorderLayout.NORTH);
 
-        JPanel pnlTabla = new JPanel(new BorderLayout(5, 5));
-        pnlTabla.setBorder(BorderFactory.createTitledBorder("Asientos Contables"));
+        JScrollPane scroll = new JScrollPane(tblAsientos);
+        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
+        pnlTabla.add(scroll, BorderLayout.CENTER);
 
-        JPanel pnlAyuda = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JLabel lblAyuda = new JLabel("Seleccione una cuenta para ver sus movimientos individuales o \"Todas\" para ver el libro completo.");
-        lblAyuda.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        lblAyuda.setForeground(new Color(117, 117, 117));
-        pnlAyuda.add(lblAyuda);
-        pnlTabla.add(pnlAyuda, BorderLayout.NORTH);
-        pnlTabla.add(new JScrollPane(tblAsientos), BorderLayout.CENTER);
-        pnlCentral.add(pnlTabla, BorderLayout.CENTER);
+        cuerpo.add(pnlTabla, BorderLayout.CENTER);
 
-        JPanel pnlResumen = new JPanel(new GridBagLayout());
-        pnlResumen.setBorder(BorderFactory.createTitledBorder("Resumen de Saldos"));
-        pnlResumen.setPreferredSize(new Dimension(280, 0));
+        // Resumen
+        JPanel pnlResumen = UIKit.card();
+        pnlResumen.setPreferredSize(new Dimension(240, 0));
+        pnlResumen.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 10, 8, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.gridx = 0;
 
-        gbc.gridx = 0; gbc.gridy = 0;
-        pnlResumen.add(new JLabel("Saldo Anterior:"), gbc);
+        gbc.gridy = 0;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlResumen.add(UIKit.sectionHeader("Resumen de Saldos", null), gbc);
+
         gbc.gridy = 1;
-        pnlResumen.add(lblSaldoAnterior, gbc);
-
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlResumen.add(UIKit.fieldLabel("Total Debe (Entradas)"), gbc);
         gbc.gridy = 2;
-        gbc.insets = new Insets(15, 10, 5, 10);
-        pnlResumen.add(new JLabel("Total Debe (Entradas):"), gbc);
-        gbc.gridy = 3;
-        gbc.insets = new Insets(0, 10, 5, 10);
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_LG, 0);
         pnlResumen.add(lblDebeTotal, gbc);
 
+        gbc.gridy = 3;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlResumen.add(UIKit.fieldLabel("Total Haber (Salidas)"), gbc);
         gbc.gridy = 4;
-        gbc.insets = new Insets(5, 10, 5, 10);
-        pnlResumen.add(new JLabel("Total Haber (Salidas):"), gbc);
-        gbc.gridy = 5;
-        gbc.insets = new Insets(0, 10, 5, 10);
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_LG, 0);
         pnlResumen.add(lblHaberTotal, gbc);
 
         JSeparator sep = new JSeparator();
-        sep.setPreferredSize(new Dimension(0, 10));
-        gbc.gridy = 6;
-        gbc.insets = new Insets(10, 10, 5, 10);
+        gbc.gridy = 5;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
         pnlResumen.add(sep, gbc);
 
+        gbc.gridy = 6;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        JLabel lblSaldoTitulo = new JLabel("SALDO ACTUAL");
+        lblSaldoTitulo.setFont(UIKit.BODY_BOLD);
+        lblSaldoTitulo.setForeground(UIKit.TEXT_SECONDARY);
+        pnlResumen.add(lblSaldoTitulo, gbc);
+
         gbc.gridy = 7;
-        gbc.insets = new Insets(5, 10, 10, 10);
-        pnlResumen.add(new JLabel("Saldo Actual:"), gbc);
-        gbc.gridy = 8;
+        gbc.weighty = 1.0;
+        gbc.anchor = GridBagConstraints.NORTH;
+        gbc.insets = new Insets(0, 0, 0, 0);
         pnlResumen.add(lblSaldoActual, gbc);
 
-        pnlCentral.add(pnlResumen, BorderLayout.EAST);
-        add(pnlCentral, BorderLayout.CENTER);
+        cuerpo.add(pnlResumen, BorderLayout.EAST);
+        getContentPane().add(cuerpo, BorderLayout.CENTER);
     }
 
     private void attachEvents() {
-        btnFiltrar.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para filtrar asientos contables por cuenta y rango de fechas desde libro_mayor.txt
-            // Actualizar totales Debe, Haber y saldos
+        btnFiltrar.addActionListener(e -> cargarAsientos());
+        btnRefrescar.addActionListener(e -> {
+            txtFechaInicio.setText(LocalDate.now().withDayOfMonth(1).toString());
+            txtFechaFin.setText(LocalDate.now().toString());
+            cbCuentaContable.setSelectedIndex(0);
+            cargarAsientos();
+        });
+        btnNuevoAsiento.addActionListener(e -> mostrarFormAsiento());
+    }
+
+    private void mostrarFormAsiento() {
+        JDialog dlg = new JDialog();
+        dlg.setTitle("Nuevo Asiento Contable");
+        dlg.setModal(true);
+        dlg.setSize(440, 380);
+        dlg.setLocationRelativeTo(this);
+        dlg.setLayout(new GridBagLayout());
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+        gbc.insets = new Insets(6, 16, 4, 16);
+
+        JTextField txtGlosa = UIKit.textField();
+        JTextField txtCuentaDebe = UIKit.textField();
+        JTextField txtCuentaHaber = UIKit.textField();
+        JTextField txtDebe = UIKit.textField();
+        txtDebe.setHorizontalAlignment(JTextField.RIGHT);
+        JTextField txtHaber = UIKit.textField();
+        txtHaber.setHorizontalAlignment(JTextField.RIGHT);
+        JTextField txtNroAsiento = UIKit.textField();
+
+        gbc.gridy = 0;
+        dlg.add(UIKit.fieldLabel("Glosa"), gbc);
+        gbc.gridy = 1;
+        dlg.add(txtGlosa, gbc);
+        gbc.gridy = 2;
+        dlg.add(UIKit.fieldLabel("Cuenta Debe"), gbc);
+        gbc.gridy = 3;
+        dlg.add(txtCuentaDebe, gbc);
+        gbc.gridy = 4;
+        dlg.add(UIKit.fieldLabel("Cuenta Haber"), gbc);
+        gbc.gridy = 5;
+        dlg.add(txtCuentaHaber, gbc);
+
+        JPanel pnlMontos = new JPanel(new GridLayout(1, 2, 8, 0));
+        pnlMontos.setOpaque(false);
+        JPanel pnlD = new JPanel(new BorderLayout(0, 4));
+        pnlD.setOpaque(false);
+        pnlD.add(UIKit.fieldLabel("Debe (S/)"), BorderLayout.NORTH);
+        pnlD.add(txtDebe, BorderLayout.CENTER);
+        JPanel pnlH = new JPanel(new BorderLayout(0, 4));
+        pnlH.setOpaque(false);
+        pnlH.add(UIKit.fieldLabel("Haber (S/)"), BorderLayout.NORTH);
+        pnlH.add(txtHaber, BorderLayout.CENTER);
+        pnlMontos.add(pnlD);
+        pnlMontos.add(pnlH);
+        gbc.gridy = 6;
+        dlg.add(pnlMontos, gbc);
+
+        gbc.gridy = 7;
+        dlg.add(UIKit.fieldLabel("N° Asiento"), gbc);
+        gbc.gridy = 8;
+        dlg.add(txtNroAsiento, gbc);
+
+        JButton btnGuardar = UIKit.primaryButton("Guardar Asiento");
+        gbc.gridy = 9;
+        gbc.insets = new Insets(12, 16, 8, 16);
+        dlg.add(btnGuardar, gbc);
+
+        btnGuardar.addActionListener(ev -> {
+            try {
+                String glosa = txtGlosa.getText().trim();
+                String cuentaDebe = txtCuentaDebe.getText().trim();
+                String cuentaHaber = txtCuentaHaber.getText().trim();
+                double debe = Double.parseDouble(txtDebe.getText().replace(",", "."));
+                double haber = Double.parseDouble(txtHaber.getText().replace(",", "."));
+                String nro = txtNroAsiento.getText().trim();
+
+                if (glosa.isEmpty() || cuentaDebe.isEmpty() || nro.isEmpty()) {
+                    JOptionPane.showMessageDialog(dlg, "Complete los campos obligatorios");
+                    return;
+                }
+
+                try (Connection con = Conexion.getConexion(); PreparedStatement ps = con.prepareStatement(
+                        "INSERT INTO LibroMayor (fecha, glosa, cuentaDebe, cuentaHaber, "
+                        + "debe, haber, nroAsiento, idUsuario) VALUES (CURDATE(),?,?,?,?,?,?,1)")) {
+                    ps.setString(1, glosa);
+                    ps.setString(2, cuentaDebe);
+                    ps.setString(3, cuentaHaber);
+                    ps.setDouble(4, debe);
+                    ps.setDouble(5, haber);
+                    ps.setString(6, nro);
+                    ps.executeUpdate();
+                    JOptionPane.showMessageDialog(dlg, "✅ Asiento registrado correctamente");
+                    dlg.dispose();
+                    cargarAsientos();
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dlg, "Ingrese montos válidos");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(dlg, "Error al guardar asiento");
+            }
         });
 
-        btnRefrescar.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para recargar todos los asientos desde libro_mayor.txt
-            JOptionPane.showMessageDialog(this, "Libro mayor actualizado desde archivo TXT.");
-        });
+        dlg.setVisible(true);
+    }
+
+    private void cargarAsientos() {
+        modelAsientos.setRowCount(0);
+        double totalDebe = 0, totalHaber = 0;
+
+        String inicio = txtFechaInicio.getText().trim();
+        String fin = txtFechaFin.getText().trim();
+        String cuenta = cbCuentaContable.getSelectedIndex() == 0 ? null
+                : cbCuentaContable.getSelectedItem().toString().split(" ")[0];
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT fecha, glosa, cuentaDebe, cuentaHaber, debe, haber, nroAsiento "
+                + "FROM LibroMayor WHERE DATE(fecha) BETWEEN ? AND ?");
+        if (cuenta != null) {
+            sql.append(" AND (cuentaDebe LIKE ? OR cuentaHaber LIKE ?)");
+        }
+        sql.append(" ORDER BY fecha DESC, nroAsiento");
+
+        try (Connection con = Conexion.getConexion(); PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            ps.setString(1, inicio.isEmpty() ? "2000-01-01" : inicio);
+            ps.setString(2, fin.isEmpty() ? LocalDate.now().toString() : fin);
+            if (cuenta != null) {
+                ps.setString(3, cuenta + "%");
+                ps.setString(4, cuenta + "%");
+            }
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                double debe = rs.getDouble("debe");
+                double haber = rs.getDouble("haber");
+                totalDebe += debe;
+                totalHaber += haber;
+                modelAsientos.addRow(new Object[]{
+                    rs.getString("fecha"),
+                    rs.getString("glosa"),
+                    rs.getString("cuentaDebe"),
+                    rs.getString("cuentaHaber"),
+                    String.format("S/ %.2f", debe),
+                    String.format("S/ %.2f", haber),
+                    rs.getString("nroAsiento")
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        lblDebeTotal.setText(String.format("S/ %.2f", totalDebe));
+        lblHaberTotal.setText(String.format("S/ %.2f", totalHaber));
+        double saldo = totalDebe - totalHaber;
+        lblSaldoActual.setText(String.format("S/ %.2f", saldo));
+        lblSaldoActual.setForeground(saldo >= 0 ? UIKit.SUCCESS : UIKit.DANGER);
     }
 }

@@ -1,189 +1,373 @@
 package Vista;
 
+import DAO.EmpleadoDAO;
+import DAO.EmpleadoDAO.Empleado;
+import DAO.PlanillaDAO;
+import Vista.Estilos.UIKit;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.time.LocalDate;
+import java.time.Month;
+import java.util.List;
 
 public class IFrmPlanillaAsistencia extends JInternalFrame {
 
     private JComboBox<String> cbEmpleado;
-    private JTextField txtMes;
+    private JComboBox<String> cbMes;
     private JTextField txtAnio;
 
     private JTable tblAsistencia;
     private DefaultTableModel modelAsistencia;
 
+    // Registro de asistencia diaria
+    private JComboBox<String> cbEstadoDia;
+    private JTextField txtFechaDia;
+    private JTextField txtHoraEntrada;
+    private JTextField txtHoraSalida;
+    private JButton btnRegistrarDia;
+
+    // Cálculo de planilla
     private JTextField txtDiasTrabajados;
     private JTextField txtFaltas;
-    private JTextField txtVacacionesAcumuladas;
     private JTextField txtDiasVacaciones;
     private JTextField txtSalarioBase;
     private JTextField txtBonificacion;
     private JTextField txtDescuento;
     private JTextField txtPagoFinal;
 
+    private JButton btnCargar;
     private JButton btnCalcular;
-    private JButton btnRegistrarVacaciones;
     private JButton btnGenerarPlanilla;
 
-    private static final Color COLOR_PRIMARY = new Color(25, 118, 210);
-    private static final Color COLOR_ACCENT = new Color(46, 125, 50);
+    private List<Empleado> listaEmpleados;
 
     public IFrmPlanillaAsistencia() {
         super("Planilla y Control de Asistencia", true, true, true, true);
         initComponents();
         buildLayout();
         attachEvents();
-        setSize(1000, 620);
+        setSize(1100, 650);
     }
 
     private void initComponents() {
-        cbEmpleado = new JComboBox<>(new String[]{"Seleccione empleado", "Carlos L\u00f3pez", "Mar\u00eda Torres", "Jos\u00e9 Ram\u00edrez"});
-        txtMes = new JTextField(8);
-        txtAnio = new JTextField(6);
+        cbEmpleado = new JComboBox<>();
+        cbEmpleado.setFont(UIKit.BODY);
+        cbEmpleado.setPreferredSize(new Dimension(220, 36));
+        cargarEmpleados();
 
-        String[] columns = {"D\u00eda", "Fecha", "Entrada", "Salida", "Horas", "Estado"};
+        cbMes = new JComboBox<>(new String[]{
+            "01 - Enero", "02 - Febrero", "03 - Marzo", "04 - Abril",
+            "05 - Mayo", "06 - Junio", "07 - Julio", "08 - Agosto",
+            "09 - Septiembre", "10 - Octubre", "11 - Noviembre", "12 - Diciembre"
+        });
+        cbMes.setFont(UIKit.BODY);
+        cbMes.setPreferredSize(new Dimension(150, 36));
+        cbMes.setSelectedIndex(LocalDate.now().getMonthValue() - 1);
+
+        txtAnio = UIKit.textField();
+        txtAnio.setPreferredSize(new Dimension(80, 36));
+        txtAnio.setText(String.valueOf(LocalDate.now().getYear()));
+
+        String[] columns = {"Fecha", "Hora Entrada", "Hora Salida", "Horas", "Estado"};
         modelAsistencia = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
-        tblAsistencia = new JTable(modelAsistencia);
+        tblAsistencia = UIKit.styledTable(modelAsistencia);
+        
+        tblAsistencia.getColumnModel().getColumn(0).setPreferredWidth(120); // Fecha
+        tblAsistencia.getColumnModel().getColumn(1).setPreferredWidth(100); // Hora Entrada
+        tblAsistencia.getColumnModel().getColumn(2).setPreferredWidth(100); // Hora Salida
+        tblAsistencia.getColumnModel().getColumn(3).setPreferredWidth(60);  // Horas
+        tblAsistencia.getColumnModel().getColumn(4).setPreferredWidth(100); // Estado
 
-        txtDiasTrabajados = new JTextField();
+        // Registro diario
+        txtFechaDia = UIKit.textField();
+        txtFechaDia.setText(LocalDate.now().toString());
+        txtFechaDia.setPreferredSize(new Dimension(120, 36));
+
+        txtHoraEntrada = UIKit.textField();
+        txtHoraEntrada.setPreferredSize(new Dimension(80, 36));
+        txtHoraEntrada.setText("08:00");
+
+        txtHoraSalida = UIKit.textField();
+        txtHoraSalida.setPreferredSize(new Dimension(80, 36));
+        txtHoraSalida.setText("17:00");
+
+        cbEstadoDia = new JComboBox<>(new String[]{"Presente", "Ausente", "Tardanza", "Permiso", "Vacaciones"});
+        cbEstadoDia.setFont(UIKit.BODY);
+        cbEstadoDia.setPreferredSize(new Dimension(120, 36));
+
+        btnRegistrarDia = UIKit.secondaryButton("Registrar Día");
+        btnCargar       = UIKit.secondaryButton("Cargar Asistencia");
+
+        // Planilla
+        txtDiasTrabajados = UIKit.readOnlyField();
         txtDiasTrabajados.setEditable(false);
-        txtFaltas = new JTextField();
+        txtFaltas         = UIKit.readOnlyField();
         txtFaltas.setEditable(false);
-        txtVacacionesAcumuladas = new JTextField();
-        txtVacacionesAcumuladas.setEditable(false);
-        txtDiasVacaciones = new JTextField();
-        txtSalarioBase = new JTextField();
-        txtBonificacion = new JTextField();
-        txtDescuento = new JTextField();
-        txtPagoFinal = new JTextField();
+        txtDiasVacaciones = UIKit.readOnlyField();
+        txtDiasVacaciones.setEditable(false);
+        txtSalarioBase    = UIKit.textField();
+        txtSalarioBase.setHorizontalAlignment(JTextField.RIGHT);
+        txtBonificacion   = UIKit.textField();
+        txtBonificacion.setHorizontalAlignment(JTextField.RIGHT);
+        txtBonificacion.setText("0.00");
+        txtDescuento      = UIKit.textField();
+        txtDescuento.setHorizontalAlignment(JTextField.RIGHT);
+        txtDescuento.setText("0.00");
+        txtPagoFinal      = UIKit.readOnlyField();
         txtPagoFinal.setEditable(false);
-        txtPagoFinal.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        txtPagoFinal.setForeground(COLOR_ACCENT);
+        txtPagoFinal.setFont(UIKit.H1);
+        txtPagoFinal.setForeground(UIKit.ACCENT);
 
-        btnCalcular = new JButton("Calcular Pago");
-        btnCalcular.setBackground(COLOR_PRIMARY);
-        btnCalcular.setForeground(Color.WHITE);
+        btnCalcular       = UIKit.secondaryButton("Calcular Pago");
+        btnGenerarPlanilla = UIKit.primaryButton("Guardar Planilla del Mes");
+        btnGenerarPlanilla.setPreferredSize(new Dimension(0, 44));
+    }
 
-        btnRegistrarVacaciones = new JButton("Registrar Vacaciones");
-        btnRegistrarVacaciones.setBackground(new Color(255, 143, 0));
-        btnRegistrarVacaciones.setForeground(Color.WHITE);
-
-        btnGenerarPlanilla = new JButton("Generar Planilla del Mes");
-        btnGenerarPlanilla.setBackground(COLOR_ACCENT);
-        btnGenerarPlanilla.setForeground(Color.WHITE);
-        btnGenerarPlanilla.setFont(new Font("Segoe UI", Font.BOLD, 14));
+    private void cargarEmpleados() {
+        cbEmpleado.removeAllItems();
+        cbEmpleado.addItem("-- Seleccione empleado --");
+        EmpleadoDAO dao = new EmpleadoDAO();
+        listaEmpleados = dao.listar();
+        for (Empleado emp : listaEmpleados) {
+            cbEmpleado.addItem(emp.nombres + " " + emp.apellidos);
+        }
     }
 
     private void buildLayout() {
-        setLayout(new BorderLayout(10, 10));
-        ((JPanel) getContentPane()).setBorder(new EmptyBorder(15, 15, 15, 15));
+        getContentPane().setLayout(new BorderLayout());
+        getContentPane().setBackground(UIKit.BG_APP);
+        ((JComponent) getContentPane()).setBorder(new EmptyBorder(
+                UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        JPanel pnlSelector = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        pnlSelector.setBorder(BorderFactory.createTitledBorder("Seleccionar Empleado y Per\u00edodo"));
-        pnlSelector.add(new JLabel("Empleado:"));
+        getContentPane().add(
+                UIKit.screenHeader("Planilla y Asistencia", "Personal  ›  Planilla y Asistencia"),
+                BorderLayout.NORTH);
+
+        JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
+        cuerpo.setOpaque(false);
+
+        // ── Izquierda: Selector + Tabla ──
+        JPanel pnlIzquierda = new JPanel(new BorderLayout(0, UIKit.SPACE_MD));
+        pnlIzquierda.setOpaque(false);
+
+        // Selector
+        JPanel pnlSelector = UIKit.card();
+        pnlSelector.setLayout(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        pnlSelector.add(UIKit.fieldLabel("Empleado:"));
         pnlSelector.add(cbEmpleado);
-        pnlSelector.add(new JLabel("Mes:"));
-        pnlSelector.add(txtMes);
-        pnlSelector.add(new JLabel("A\u00f1o:"));
+        pnlSelector.add(UIKit.fieldLabel("Mes:"));
+        pnlSelector.add(cbMes);
+        pnlSelector.add(UIKit.fieldLabel("Año:"));
         pnlSelector.add(txtAnio);
+        pnlSelector.add(btnCargar);
+        pnlIzquierda.add(pnlSelector, BorderLayout.NORTH);
 
-        JPanel pnlCentral = new JPanel(new BorderLayout(10, 10));
+        // Tabla asistencia
+        JPanel pnlTabla = UIKit.card();
+        pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
 
-        JPanel pnlTabla = new JPanel(new BorderLayout(5, 5));
-        pnlTabla.setBorder(BorderFactory.createTitledBorder("Registro de Asistencia"));
-        pnlTabla.add(new JScrollPane(tblAsistencia), BorderLayout.CENTER);
-        pnlCentral.add(pnlTabla, BorderLayout.CENTER);
+        // Registro diario
+        JPanel pnlRegistro = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        pnlRegistro.setOpaque(false);
+        pnlRegistro.add(UIKit.fieldLabel("Fecha:"));
+        pnlRegistro.add(txtFechaDia);
+        pnlRegistro.add(UIKit.fieldLabel("Entrada:"));
+        pnlRegistro.add(txtHoraEntrada);
+        pnlRegistro.add(UIKit.fieldLabel("Salida:"));
+        pnlRegistro.add(txtHoraSalida);
+        pnlRegistro.add(UIKit.fieldLabel("Estado:"));
+        pnlRegistro.add(cbEstadoDia);
+        pnlRegistro.add(btnRegistrarDia);
 
-        JPanel pnlDerecho = new JPanel(new GridBagLayout());
-        pnlDerecho.setBorder(BorderFactory.createTitledBorder("C\u00e1lculo de Pago y Vacaciones"));
-        pnlDerecho.setPreferredSize(new Dimension(340, 0));
+        JPanel pnlTopTabla = new JPanel(new BorderLayout(0, UIKit.SPACE_SM));
+        pnlTopTabla.setOpaque(false);
+        pnlTopTabla.add(UIKit.sectionHeader("Registro de Asistencia", null), BorderLayout.NORTH);
+        pnlTopTabla.add(pnlRegistro, BorderLayout.SOUTH);
+
+        pnlTabla.add(pnlTopTabla, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(tblAsistencia);
+        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
+        pnlTabla.add(scroll, BorderLayout.CENTER);
+
+        pnlIzquierda.add(pnlTabla, BorderLayout.CENTER);
+        cuerpo.add(pnlIzquierda, BorderLayout.CENTER);
+
+        // ── Derecha: Planilla ──
+        JPanel pnlPlanilla = UIKit.card();
+        pnlPlanilla.setPreferredSize(new Dimension(280, 0));
+        pnlPlanilla.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4, 8, 4, 8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.fill    = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.gridx   = 0;
 
-        gbc.gridx = 0; gbc.gridy = 0;
-        pnlDerecho.add(new JLabel("D\u00edas Trabajados:"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtDiasTrabajados, gbc);
+        gbc.gridy = 0; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlPlanilla.add(UIKit.sectionHeader("Cálculo de Planilla", null), gbc);
 
-        gbc.gridx = 0; gbc.gridy = 1;
-        pnlDerecho.add(new JLabel("Faltas / Inasistencias:"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtFaltas, gbc);
+        gbc.gridy = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlPlanilla.add(UIKit.fieldLabel("Días Trabajados"), gbc);
+        gbc.gridy = 2; gbc.insets = new Insets(0, 0, UIKit.SPACE_SM, 0);
+        pnlPlanilla.add(txtDiasTrabajados, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 2;
-        pnlDerecho.add(new JLabel("Vacaciones Acumuladas (d\u00edas):"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtVacacionesAcumuladas, gbc);
+        gbc.gridy = 3; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlPlanilla.add(UIKit.fieldLabel("Faltas"), gbc);
+        gbc.gridy = 4; gbc.insets = new Insets(0, 0, UIKit.SPACE_SM, 0);
+        pnlPlanilla.add(txtFaltas, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 3;
-        pnlDerecho.add(new JLabel("D\u00edas a Tomar Vacaciones:"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtDiasVacaciones, gbc);
+        gbc.gridy = 5; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlPlanilla.add(UIKit.fieldLabel("Días Vacaciones"), gbc);
+        gbc.gridy = 6; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlPlanilla.add(txtDiasVacaciones, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 4;
-        JSeparator sep = new JSeparator();
-        sep.setPreferredSize(new Dimension(0, 10));
-        pnlDerecho.add(sep, gbc);
+        gbc.gridy = 7; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlPlanilla.add(UIKit.fieldLabel("Salario Base (S/)"), gbc);
+        gbc.gridy = 8; gbc.insets = new Insets(0, 0, UIKit.SPACE_SM, 0);
+        pnlPlanilla.add(txtSalarioBase, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 5;
-        pnlDerecho.add(new JLabel("Salario Base:"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtSalarioBase, gbc);
+        gbc.gridy = 9; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlPlanilla.add(UIKit.fieldLabel("Bonificación (S/)"), gbc);
+        gbc.gridy = 10; gbc.insets = new Insets(0, 0, UIKit.SPACE_SM, 0);
+        pnlPlanilla.add(txtBonificacion, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 6;
-        pnlDerecho.add(new JLabel("Bonificaci\u00f3n:"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtBonificacion, gbc);
+        gbc.gridy = 11; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlPlanilla.add(UIKit.fieldLabel("Descuentos (S/)"), gbc);
+        gbc.gridy = 12; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlPlanilla.add(txtDescuento, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 7;
-        pnlDerecho.add(new JLabel("Descuentos:"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtDescuento, gbc);
+        gbc.gridy = 13; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        JLabel lblPago = new JLabel("PAGO FINAL");
+        lblPago.setFont(UIKit.BODY_BOLD);
+        lblPago.setForeground(UIKit.TEXT_SECONDARY);
+        pnlPlanilla.add(lblPago, gbc);
+        gbc.gridy = 14; gbc.insets = new Insets(0, 0, UIKit.SPACE_LG, 0);
+        pnlPlanilla.add(txtPagoFinal, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 8;
-        pnlDerecho.add(new JLabel("Pago Final:"), gbc);
-        gbc.gridx = 1;
-        pnlDerecho.add(txtPagoFinal, gbc);
+        gbc.gridy = 15; gbc.insets = new Insets(0, 0, UIKit.SPACE_SM, 0);
+        pnlPlanilla.add(btnCalcular, gbc);
 
-        JPanel pnlBotones = new JPanel(new GridLayout(3, 1, 5, 5));
-        pnlBotones.setBorder(new EmptyBorder(10, 0, 0, 0));
-        pnlBotones.add(btnCalcular);
-        pnlBotones.add(btnRegistrarVacaciones);
-        pnlBotones.add(btnGenerarPlanilla);
+        gbc.gridy = 16; gbc.weighty = 1.0;
+        gbc.anchor = GridBagConstraints.NORTH;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        pnlPlanilla.add(btnGenerarPlanilla, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 9;
-        gbc.gridwidth = 2;
-        pnlDerecho.add(pnlBotones, gbc);
-
-        pnlCentral.add(pnlDerecho, BorderLayout.EAST);
-
-        add(pnlSelector, BorderLayout.NORTH);
-        add(pnlCentral, BorderLayout.CENTER);
+        cuerpo.add(pnlPlanilla, BorderLayout.EAST);
+        getContentPane().add(cuerpo, BorderLayout.CENTER);
     }
 
     private void attachEvents() {
-        cbEmpleado.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para cargar asistencia del empleado seleccionado del mes/a\u00f1o
+
+        // CARGAR ASISTENCIA
+        btnCargar.addActionListener(e -> cargarAsistencia());
+
+        // REGISTRAR DÍA
+        btnRegistrarDia.addActionListener(e -> {
+            if (cbEmpleado.getSelectedIndex() == 0) {
+                JOptionPane.showMessageDialog(this, "Seleccione un empleado");
+                return;
+            }
+            String fecha      = txtFechaDia.getText().trim();
+            String entrada    = txtHoraEntrada.getText().trim();
+            String salida     = txtHoraSalida.getText().trim();
+            String estado     = cbEstadoDia.getSelectedItem().toString();
+
+            // Calcular horas
+            double horas = 0;
+            try {
+                if (!entrada.isEmpty() && !salida.isEmpty()) {
+                    String[] e1 = entrada.split(":");
+                    String[] s1 = salida.split(":");
+                    int minE = Integer.parseInt(e1[0]) * 60 + Integer.parseInt(e1[1]);
+                    int minS = Integer.parseInt(s1[0]) * 60 + Integer.parseInt(s1[1]);
+                    horas = (minS - minE) / 60.0;
+                }
+            } catch (Exception ex) { horas = 0; }
+
+            int idEmpleado = listaEmpleados.get(cbEmpleado.getSelectedIndex() - 1).idEmpleado;
+            PlanillaDAO dao = new PlanillaDAO();
+            if (dao.registrarAsistencia(idEmpleado, fecha, entrada, salida, horas, estado)) {
+                JOptionPane.showMessageDialog(this, "Asistencia registrada correctamente");
+                cargarAsistencia();
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al registrar asistencia");
+            }
         });
 
+        // CALCULAR PAGO
         btnCalcular.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para calcular pago en base a asistencia, salario base, bonificaciones y descuentos
-            // F\u00f3rmula: pago = salarioBase + bonificacion - descuento
+            try {
+                double salario     = Double.parseDouble(txtSalarioBase.getText().replace(",", "."));
+                double bonif       = Double.parseDouble(txtBonificacion.getText().replace(",", "."));
+                double desc        = Double.parseDouble(txtDescuento.getText().replace(",", "."));
+                double pagoFinal   = salario + bonif - desc;
+                txtPagoFinal.setText(String.format("S/ %.2f", pagoFinal));
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Ingrese valores numéricos válidos");
+            }
         });
 
-        btnRegistrarVacaciones.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para registrar vacaciones y actualizar d\u00edas acumulados en empleados.txt
-        });
-
+        // GUARDAR PLANILLA
         btnGenerarPlanilla.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para generar planilla completa del mes (todos los empleados) y guardar en planilla.txt o PDF
-            JOptionPane.showMessageDialog(this, "Planilla del mes generada exitosamente.");
+            if (cbEmpleado.getSelectedIndex() == 0) {
+                JOptionPane.showMessageDialog(this, "Seleccione un empleado");
+                return;
+            }
+            if (txtSalarioBase.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Ingrese el salario base");
+                return;
+            }
+
+            try {
+                int idEmpleado    = listaEmpleados.get(cbEmpleado.getSelectedIndex() - 1).idEmpleado;
+                int mes           = cbMes.getSelectedIndex() + 1;
+                int anio          = Integer.parseInt(txtAnio.getText().trim());
+                int diasTrab      = txtDiasTrabajados.getText().isEmpty() ? 0 : Integer.parseInt(txtDiasTrabajados.getText());
+                int faltas        = txtFaltas.getText().isEmpty() ? 0 : Integer.parseInt(txtFaltas.getText());
+                int diasVac       = txtDiasVacaciones.getText().isEmpty() ? 0 : Integer.parseInt(txtDiasVacaciones.getText());
+                double salario    = Double.parseDouble(txtSalarioBase.getText().replace(",", "."));
+                double bonif      = Double.parseDouble(txtBonificacion.getText().replace(",", "."));
+                double desc       = Double.parseDouble(txtDescuento.getText().replace(",", "."));
+                double pagoFinal  = salario + bonif - desc;
+
+                PlanillaDAO dao = new PlanillaDAO();
+                if (dao.guardarPlanilla(idEmpleado, mes, anio, diasTrab, faltas,
+                        diasVac, salario, bonif, desc, pagoFinal, 1)) {
+                    JOptionPane.showMessageDialog(this,
+                        "✅ Planilla guardada correctamente\nPago Final: S/ " +
+                        String.format("%.2f", pagoFinal));
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al guardar planilla");
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Verifique los valores ingresados");
+            }
         });
+    }
+
+    private void cargarAsistencia() {
+        if (cbEmpleado.getSelectedIndex() == 0) return;
+
+        int idEmpleado = listaEmpleados.get(cbEmpleado.getSelectedIndex() - 1).idEmpleado;
+        int mes        = cbMes.getSelectedIndex() + 1;
+        int anio       = Integer.parseInt(txtAnio.getText().trim());
+
+        modelAsistencia.setRowCount(0);
+        PlanillaDAO dao = new PlanillaDAO();
+        List<Object[]> lista = dao.listarAsistencia(idEmpleado, mes, anio);
+        for (Object[] row : lista) {
+            modelAsistencia.addRow(row);
+        }
+
+        // Actualizar contadores
+        int[] totales = dao.contarDias(idEmpleado, mes, anio);
+        txtDiasTrabajados.setText(String.valueOf(totales[0]));
+        txtFaltas.setText(String.valueOf(totales[1]));
+        txtDiasVacaciones.setText(String.valueOf(totales[2]));
     }
 }

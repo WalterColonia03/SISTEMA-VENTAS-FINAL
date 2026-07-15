@@ -124,7 +124,7 @@ public final class UIKit {
     public static JPanel card() {
         JPanel p = new JPanel();
         p.setBackground(BG_CARD);
-        p.putClientProperty(FlatClientProperties.STYLE, "arc: 10; [light]borderColor: " + hex(BORDER) + ";");
+        p.putClientProperty(FlatClientProperties.STYLE, "arc: 10;");
         p.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDER, 1, true),
                 new EmptyBorder(SPACE_MD, SPACE_MD, SPACE_MD, SPACE_MD)));

@@ -1,9 +1,14 @@
 package Vista;
 
+import DAO.EmpleadoDAO;
+import DAO.EmpleadoDAO.Empleado;
+import Vista.Estilos.UIKit;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
 public class IFrmFichaEmpleados extends JInternalFrame {
 
@@ -16,175 +21,266 @@ public class IFrmFichaEmpleados extends JInternalFrame {
     private JTextField txtApellido;
     private JTextField txtDni;
     private JTextField txtTelefono;
-    private JTextField txtCorreo;
     private JTextField txtDireccion;
     private JComboBox<String> cbCargo;
-    private JTextField txtSalario;
     private JComboBox<String> cbEstado;
 
     private JButton btnBuscar;
     private JButton btnGuardar;
-    private JButton btnEliminar;
+    private JButton btnDesactivar;
     private JButton btnLimpiar;
 
-    private static final Color COLOR_PRIMARY = new Color(25, 118, 210);
-    private static final Color COLOR_ACCENT = new Color(46, 125, 50);
+    private List<String[]> listaCargos;
 
     public IFrmFichaEmpleados() {
         super("Ficha de Empleados", true, true, true, true);
         initComponents();
         buildLayout();
         attachEvents();
-        setSize(950, 600);
+        setSize(960, 600);
+        cargarTabla();
     }
 
     private void initComponents() {
-        txtBuscar = new JTextField(15);
-        btnBuscar = new JButton("Buscar");
+        txtBuscar = UIKit.textField();
+        txtBuscar.setPreferredSize(new Dimension(200, 36));
+        btnBuscar = UIKit.secondaryButton("Buscar");
 
-        String[] columns = {"ID", "Nombre", "Apellido", "DNI", "Cargo", "Salario", "Tel\u00e9fono", "Estado"};
+        String[] columns = {"ID", "Nombres", "Apellidos", "DNI", "Cargo", "Teléfono", "Estado"};
         modelEmpleados = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
-        tblEmpleados = new JTable(modelEmpleados);
+        tblEmpleados = UIKit.styledTable(modelEmpleados);
 
-        txtId = new JTextField();
+        txtId = UIKit.readOnlyField();
         txtId.setEditable(false);
-        txtNombre = new JTextField();
-        txtApellido = new JTextField();
-        txtDni = new JTextField();
-        txtTelefono = new JTextField();
-        txtCorreo = new JTextField();
-        txtDireccion = new JTextField();
-        cbCargo = new JComboBox<>(new String[]{"Vendedor", "Cajero", "Supervisor", "Administrador", "Almacenero"});
-        txtSalario = new JTextField();
+        txtId.setFocusable(false);
+        txtNombre    = UIKit.textField();
+        txtApellido  = UIKit.textField();
+        txtDni       = UIKit.textField();
+        txtTelefono  = UIKit.textField();
+        txtDireccion = UIKit.textField();
+
+        cbCargo = new JComboBox<>();
+        cbCargo.setFont(UIKit.BODY);
+        cbCargo.setPreferredSize(new Dimension(0, 36));
+        cargarCargos();
+
         cbEstado = new JComboBox<>(new String[]{"Activo", "Inactivo"});
+        cbEstado.setFont(UIKit.BODY);
 
-        btnGuardar = new JButton("Guardar / Actualizar");
-        btnGuardar.setBackground(COLOR_ACCENT);
-        btnGuardar.setForeground(Color.WHITE);
+        btnGuardar    = UIKit.primaryButton("Guardar / Actualizar");
+        btnLimpiar    = UIKit.secondaryButton("Limpiar / Nuevo");
+        btnDesactivar = UIKit.secondaryButton("Desactivar / Activar");
+    }
 
-        btnEliminar = new JButton("Eliminar");
-        btnEliminar.setBackground(new Color(198, 40, 40));
-        btnEliminar.setForeground(Color.WHITE);
-
-        btnLimpiar = new JButton("Limpiar / Nuevo");
-        btnLimpiar.setBackground(new Color(96, 125, 139));
-        btnLimpiar.setForeground(Color.WHITE);
+    private void cargarCargos() {
+        cbCargo.removeAllItems();
+        EmpleadoDAO dao = new EmpleadoDAO();
+        listaCargos = dao.listarCargos();
+        for (String[] cargo : listaCargos) {
+            cbCargo.addItem(cargo[1]);
+        }
     }
 
     private void buildLayout() {
-        setLayout(new BorderLayout(10, 10));
-        ((JPanel) getContentPane()).setBorder(new EmptyBorder(15, 15, 15, 15));
+        getContentPane().setLayout(new BorderLayout());
+        getContentPane().setBackground(UIKit.BG_APP);
+        ((JComponent) getContentPane()).setBorder(new EmptyBorder(
+                UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        JPanel pnlTabla = new JPanel(new BorderLayout(10, 10));
-        pnlTabla.setBorder(BorderFactory.createTitledBorder("Listado del Personal"));
+        getContentPane().add(
+                UIKit.screenHeader("Ficha de Empleados", "Personal  ›  Empleados"),
+                BorderLayout.NORTH);
 
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        pnlBusqueda.add(new JLabel("Buscar:"));
+        JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
+        cuerpo.setOpaque(false);
+
+        // Tabla
+        JPanel pnlTabla = UIKit.card();
+        pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
+
+        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        pnlBusqueda.setOpaque(false);
         pnlBusqueda.add(txtBuscar);
         pnlBusqueda.add(btnBuscar);
-        pnlTabla.add(pnlBusqueda, BorderLayout.NORTH);
-        pnlTabla.add(new JScrollPane(tblEmpleados), BorderLayout.CENTER);
 
-        JPanel pnlForm = new JPanel(new GridBagLayout());
-        pnlForm.setBorder(BorderFactory.createTitledBorder("Datos del Empleado"));
-        pnlForm.setPreferredSize(new Dimension(380, 0));
+        JPanel pnlHeader = new JPanel(new BorderLayout());
+        pnlHeader.setOpaque(false);
+        pnlHeader.add(UIKit.sectionHeader("Listado de Empleados", null), BorderLayout.NORTH);
+        pnlHeader.add(pnlBusqueda, BorderLayout.CENTER);
+
+        pnlTabla.add(pnlHeader, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(tblEmpleados);
+        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
+        pnlTabla.add(scroll, BorderLayout.CENTER);
+        cuerpo.add(pnlTabla, BorderLayout.CENTER);
+
+        // Formulario
+        JPanel pnlForm = UIKit.card();
+        pnlForm.setPreferredSize(new Dimension(340, 0));
+        pnlForm.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.fill    = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.gridwidth = 2;
+        gbc.gridx = 0;
 
-        gbc.gridx = 0; gbc.gridy = 0;
-        pnlForm.add(new JLabel("ID Empleado:"), gbc);
-        gbc.gridx = 1;
+        gbc.gridy = 0; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
+        pnlForm.add(UIKit.sectionHeader("Datos del Empleado", null), gbc);
+
+        gbc.gridy = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlForm.add(UIKit.fieldLabel("ID Empleado"), gbc);
+        gbc.gridy = 2; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
         pnlForm.add(txtId, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 1;
-        pnlForm.add(new JLabel("Nombre:"), gbc);
-        gbc.gridx = 1;
-        pnlForm.add(txtNombre, gbc);
+        // Nombre y Apellido
+        gbc.gridwidth = 1;
+        gbc.gridy = 3; gbc.gridx = 0;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, UIKit.SPACE_SM);
+        pnlForm.add(UIKit.fieldLabel("Nombres"), gbc);
+        gbc.gridx = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlForm.add(UIKit.fieldLabel("Apellidos"), gbc);
 
-        gbc.gridx = 0; gbc.gridy = 2;
-        pnlForm.add(new JLabel("Apellido:"), gbc);
-        gbc.gridx = 1;
+        gbc.gridy = 4; gbc.gridx = 0;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, UIKit.SPACE_SM);
+        pnlForm.add(txtNombre, gbc);
+        gbc.gridx = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
         pnlForm.add(txtApellido, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 3;
-        pnlForm.add(new JLabel("DNI:"), gbc);
-        gbc.gridx = 1;
-        pnlForm.add(txtDni, gbc);
+        // DNI y Teléfono
+        gbc.gridy = 5; gbc.gridx = 0;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, UIKit.SPACE_SM);
+        pnlForm.add(UIKit.fieldLabel("DNI"), gbc);
+        gbc.gridx = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlForm.add(UIKit.fieldLabel("Teléfono"), gbc);
 
-        gbc.gridx = 0; gbc.gridy = 4;
-        pnlForm.add(new JLabel("Tel\u00e9fono:"), gbc);
-        gbc.gridx = 1;
+        gbc.gridy = 6; gbc.gridx = 0;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, UIKit.SPACE_SM);
+        pnlForm.add(txtDni, gbc);
+        gbc.gridx = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
         pnlForm.add(txtTelefono, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 5;
-        pnlForm.add(new JLabel("Correo:"), gbc);
-        gbc.gridx = 1;
-        pnlForm.add(txtCorreo, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 6;
-        pnlForm.add(new JLabel("Direcci\u00f3n:"), gbc);
-        gbc.gridx = 1;
-        pnlForm.add(txtDireccion, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 7;
-        pnlForm.add(new JLabel("Cargo:"), gbc);
-        gbc.gridx = 1;
+        // Cargo
+        gbc.gridwidth = 2; gbc.gridx = 0;
+        gbc.gridy = 7; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlForm.add(UIKit.fieldLabel("Cargo"), gbc);
+        gbc.gridy = 8; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
         pnlForm.add(cbCargo, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 8;
-        pnlForm.add(new JLabel("Salario (S/):"), gbc);
-        gbc.gridx = 1;
-        pnlForm.add(txtSalario, gbc);
+        // Dirección
+        gbc.gridy = 9; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlForm.add(UIKit.fieldLabel("Dirección"), gbc);
+        gbc.gridy = 10; gbc.insets = new Insets(0, 0, UIKit.SPACE_LG, 0);
+        pnlForm.add(txtDireccion, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 9;
-        pnlForm.add(new JLabel("Estado:"), gbc);
-        gbc.gridx = 1;
-        pnlForm.add(cbEstado, gbc);
-
-        JPanel pnlBotones = new JPanel(new GridLayout(1, 3, 8, 8));
-        pnlBotones.setBorder(new EmptyBorder(10, 0, 0, 0));
+        // Botones
+        JPanel pnlBotones = new JPanel(new GridLayout(3, 1, 0, UIKit.SPACE_SM));
+        pnlBotones.setOpaque(false);
         pnlBotones.add(btnGuardar);
-        pnlBotones.add(btnEliminar);
         pnlBotones.add(btnLimpiar);
+        pnlBotones.add(btnDesactivar);
 
-        gbc.gridx = 0; gbc.gridy = 10;
-        gbc.gridwidth = 2;
+        gbc.gridy = 11; gbc.weighty = 1.0;
+        gbc.anchor = GridBagConstraints.NORTH;
+        gbc.insets = new Insets(0, 0, 0, 0);
         pnlForm.add(pnlBotones, gbc);
 
-        add(pnlTabla, BorderLayout.CENTER);
-        add(pnlForm, BorderLayout.EAST);
+        cuerpo.add(pnlForm, BorderLayout.EAST);
+        getContentPane().add(cuerpo, BorderLayout.CENTER);
     }
 
     private void attachEvents() {
+
+        // BUSCAR
         btnBuscar.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para buscar empleados por nombre, DNI o cargo en empleados.txt
+            String texto = txtBuscar.getText().trim().toLowerCase();
+            modelEmpleados.setRowCount(0);
+            EmpleadoDAO dao = new EmpleadoDAO();
+            for (Empleado emp : dao.listar()) {
+                if (emp.nombres.toLowerCase().contains(texto)
+                        || emp.apellidos.toLowerCase().contains(texto)
+                        || emp.dni.toLowerCase().contains(texto)) {
+                    modelEmpleados.addRow(new Object[]{
+                        emp.idEmpleado, emp.nombres, emp.apellidos,
+                        emp.dni, emp.cargo, emp.telefono,
+                        emp.estado == 1 ? "Activo" : "Inactivo"
+                    });
+                }
+            }
         });
 
+        // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para crear o actualizar un empleado
+            String nombre   = txtNombre.getText().trim();
+            String apellido = txtApellido.getText().trim();
+            String dni      = txtDni.getText().trim();
+
+            if (nombre.isEmpty() || apellido.isEmpty() || dni.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Nombres, apellidos y DNI son obligatorios");
+                return;
+            }
+
+            int idCargo = obtenerIdCargo(cbCargo.getSelectedItem().toString());
+            Empleado emp = new Empleado(0, nombre, apellido, dni,
+                txtTelefono.getText().trim(), txtDireccion.getText().trim(),
+                idCargo, "", "", 1);
+
+            EmpleadoDAO dao = new EmpleadoDAO();
+
+            if (txtId.getText().isEmpty()) {
+                if (dao.insertar(emp)) {
+                    JOptionPane.showMessageDialog(this, "Empleado registrado correctamente");
+                    cargarTabla();
+                    limpiar();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al registrar");
+                }
+            } else {
+                emp.idEmpleado = Integer.parseInt(txtId.getText());
+                if (dao.actualizar(emp)) {
+                    JOptionPane.showMessageDialog(this, "Empleado actualizado");
+                    cargarTabla();
+                    limpiar();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al actualizar");
+                }
+            }
         });
 
-        btnEliminar.addActionListener(e -> {
-            // TODO: l\u00f3gica TXT para eliminar empleado (cambiar estado a 0)
+        // DESACTIVAR / ACTIVAR
+        btnDesactivar.addActionListener(e -> {
+            if (txtId.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Seleccione un empleado");
+                return;
+            }
+            int id  = Integer.parseInt(txtId.getText());
+            int row = tblEmpleados.getSelectedRow();
+            String estadoActual = modelEmpleados.getValueAt(row, 6).toString();
+            EmpleadoDAO dao = new EmpleadoDAO();
+
+            if (estadoActual.equals("Activo")) {
+                int op = JOptionPane.showConfirmDialog(this,
+                    "¿Desactivar este empleado?", "Confirmar", JOptionPane.YES_NO_OPTION);
+                if (op != JOptionPane.YES_OPTION) return;
+                if (dao.desactivar(id)) {
+                    JOptionPane.showMessageDialog(this, "Empleado desactivado");
+                    cargarTabla(); limpiar();
+                }
+            } else {
+                if (dao.reactivar(id)) {
+                    JOptionPane.showMessageDialog(this, "Empleado reactivado");
+                    cargarTabla(); limpiar();
+                }
+            }
         });
 
-        btnLimpiar.addActionListener(e -> {
-            txtId.setText("");
-            txtNombre.setText("");
-            txtApellido.setText("");
-            txtDni.setText("");
-            txtTelefono.setText("");
-            txtCorreo.setText("");
-            txtDireccion.setText("");
-            cbCargo.setSelectedIndex(0);
-            txtSalario.setText("");
-            cbEstado.setSelectedIndex(0);
-        });
+        // LIMPIAR
+        btnLimpiar.addActionListener(e -> limpiar());
 
+        // SELECCIONAR FILA
         tblEmpleados.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && tblEmpleados.getSelectedRow() != -1) {
                 int row = tblEmpleados.getSelectedRow();
@@ -195,14 +291,46 @@ public class IFrmFichaEmpleados extends JInternalFrame {
                 String cargo = modelEmpleados.getValueAt(row, 4).toString();
                 for (int i = 0; i < cbCargo.getItemCount(); i++) {
                     if (cbCargo.getItemAt(i).equals(cargo)) {
-                        cbCargo.setSelectedIndex(i);
-                        break;
+                        cbCargo.setSelectedIndex(i); break;
                     }
                 }
-                txtSalario.setText(modelEmpleados.getValueAt(row, 5).toString());
-                txtTelefono.setText(modelEmpleados.getValueAt(row, 6).toString());
-                cbEstado.setSelectedItem(modelEmpleados.getValueAt(row, 7).toString());
+                txtTelefono.setText(modelEmpleados.getValueAt(row, 5).toString());
+                String estado = modelEmpleados.getValueAt(row, 6).toString();
+                btnDesactivar.setText(estado.equals("Activo") ? "Desactivar" : "Activar");
             }
         });
+    }
+
+    private void cargarTabla() {
+        modelEmpleados.setRowCount(0);
+        EmpleadoDAO dao = new EmpleadoDAO();
+        for (Empleado emp : dao.listar()) {
+            modelEmpleados.addRow(new Object[]{
+                emp.idEmpleado, emp.nombres, emp.apellidos,
+                emp.dni, emp.cargo, emp.telefono,
+                emp.estado == 1 ? "Activo" : "Inactivo"
+            });
+        }
+    }
+
+    private int obtenerIdCargo(String nombre) {
+        if (listaCargos != null) {
+            for (String[] cargo : listaCargos) {
+                if (cargo[1].equals(nombre)) return Integer.parseInt(cargo[0]);
+            }
+        }
+        return 1;
+    }
+
+    private void limpiar() {
+        txtId.setText("");
+        txtNombre.setText("");
+        txtApellido.setText("");
+        txtDni.setText("");
+        txtTelefono.setText("");
+        txtDireccion.setText("");
+        cbCargo.setSelectedIndex(0);
+        tblEmpleados.clearSelection();
+        btnDesactivar.setText("Desactivar / Activar");
     }
 }
