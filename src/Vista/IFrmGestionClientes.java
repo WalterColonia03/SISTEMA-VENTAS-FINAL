@@ -2,6 +2,8 @@ package Vista;
 
 import Clases.Cliente;
 import DAO.ClienteDAO;
+import API.ApiClient;
+import Servicio.Validador;
 import Vista.Estilos.UIKit;
 
 import javax.swing.*;
@@ -14,6 +16,7 @@ public class IFrmGestionClientes extends JInternalFrame {
     private JTable tblClientes;
     private DefaultTableModel modelClientes;
     private JTextField txtBuscar;
+    private JLabel lblEmptyState;
 
     private JTextField txtId;
     private JTextField txtNombre;
@@ -22,10 +25,11 @@ public class IFrmGestionClientes extends JInternalFrame {
     private JTextField txtTelefono;
     private JTextField txtCorreo;
 
-    private JButton btnBuscar;
+    private JButton btnNuevo;
     private JButton btnGuardar;
     private JButton btnDesactivar;
     private JButton btnLimpiar;
+    private JButton btnConsultarDni;
 
     public IFrmGestionClientes() {
         super("Gestión de Clientes", true, true, true, true);
@@ -37,9 +41,7 @@ public class IFrmGestionClientes extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(200, 36));
-        btnBuscar = UIKit.secondaryButton("Buscar");
+        txtBuscar = UIKit.searchField("Buscar cliente por nombre o DNI...", null);
 
         String[] columns = {"ID", "Nombre", "Apellido", "DNI/RUC", "Teléfono", "Correo", "Estado"};
         modelClientes = new DefaultTableModel(columns, 0) {
@@ -47,18 +49,19 @@ public class IFrmGestionClientes extends JInternalFrame {
         };
         tblClientes = UIKit.styledTable(modelClientes);
 
-        txtId       = UIKit.readOnlyField();
-        txtId.setEditable(false);
-        txtId.setFocusable(false);
-        txtNombre   = UIKit.textField();
-        txtApellido = UIKit.textField();
-        txtDni      = UIKit.textField();
-        txtTelefono = UIKit.textField();
-        txtCorreo   = UIKit.textField();
+        lblEmptyState = new JLabel("No hay clientes registrados", SwingConstants.CENTER);
+        lblEmptyState.setFont(UIKit.BODY); lblEmptyState.setForeground(UIKit.TEXT_SECONDARY);
+        lblEmptyState.setVisible(false);
 
+        txtId       = UIKit.readOnlyField(); txtId.setEditable(false); txtId.setFocusable(false);
+        txtNombre   = UIKit.textField(); txtApellido = UIKit.textField();
+        txtDni      = UIKit.textField(); txtTelefono = UIKit.textField(); txtCorreo = UIKit.textField();
+
+        btnNuevo      = UIKit.primaryButton("+ Nuevo Cliente");
         btnGuardar    = UIKit.primaryButton("Guardar / Actualizar");
         btnLimpiar    = UIKit.secondaryButton("Limpiar / Nuevo");
         btnDesactivar = UIKit.secondaryButton("Desactivar / Activar");
+        btnConsultarDni = UIKit.secondaryButton("RENIEC");
     }
 
     private void buildLayout() {
@@ -67,32 +70,28 @@ public class IFrmGestionClientes extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        getContentPane().add(
-                UIKit.screenHeader("Gestión de Clientes", "Clientes y Proveedores  ›  Clientes"),
-                BorderLayout.NORTH);
+        JPanel pnlTop = new JPanel(new BorderLayout());
+        pnlTop.setOpaque(false);
+        pnlTop.add(UIKit.screenHeader("Gestión de Clientes", "Clientes y Proveedores  ›  Clientes"), BorderLayout.WEST);
+        pnlTop.add(btnNuevo, BorderLayout.EAST);
+        getContentPane().add(pnlTop, BorderLayout.NORTH);
 
         JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
         cuerpo.setOpaque(false);
 
-        // Tabla
         JPanel pnlTabla = UIKit.card();
         pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
 
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
-        pnlBusqueda.setOpaque(false);
-        pnlBusqueda.add(txtBuscar);
-        pnlBusqueda.add(btnBuscar);
+        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlBusqueda.setOpaque(false); pnlBusqueda.add(txtBuscar);
+        pnlTabla.add(UIKit.sectionHeader("Listado de Clientes", null), BorderLayout.NORTH);
+        pnlTabla.add(pnlBusqueda, BorderLayout.BEFORE_FIRST_LINE);
 
-        JPanel pnlHeader = new JPanel(new BorderLayout());
-        pnlHeader.setOpaque(false);
-        pnlHeader.add(UIKit.sectionHeader("Listado de Clientes", null), BorderLayout.NORTH);
-        pnlHeader.add(pnlBusqueda, BorderLayout.CENTER);
-
-        pnlTabla.add(pnlHeader, BorderLayout.NORTH);
-
+        JPanel pnlWrapper = new JPanel(new BorderLayout()); pnlWrapper.setOpaque(false);
         JScrollPane scroll = new JScrollPane(tblClientes);
         scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnlTabla.add(scroll, BorderLayout.CENTER);
+        pnlWrapper.add(scroll, BorderLayout.CENTER); pnlWrapper.add(lblEmptyState, BorderLayout.SOUTH);
+        pnlTabla.add(pnlWrapper, BorderLayout.CENTER);
         cuerpo.add(pnlTabla, BorderLayout.CENTER);
 
         // Formulario
@@ -137,7 +136,11 @@ public class IFrmGestionClientes extends JInternalFrame {
 
         gbc.gridy = 6; gbc.gridx = 0;
         gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, UIKit.SPACE_SM);
-        pnlForm.add(txtDni, gbc);
+        JPanel pnlDni = new JPanel(new BorderLayout(5, 0));
+        pnlDni.setOpaque(false);
+        pnlDni.add(txtDni, BorderLayout.CENTER);
+        pnlDni.add(btnConsultarDni, BorderLayout.EAST);
+        pnlForm.add(pnlDni, gbc);
         gbc.gridx = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
         pnlForm.add(txtTelefono, gbc);
 
@@ -166,23 +169,26 @@ public class IFrmGestionClientes extends JInternalFrame {
 
     private void attachEvents() {
 
-        // BUSCAR
-        btnBuscar.addActionListener(e -> {
-            String texto = txtBuscar.getText().trim().toLowerCase();
-            modelClientes.setRowCount(0);
-            ClienteDAO dao = new ClienteDAO();
-            for (Cliente c : dao.listarTodos()) {
-                if (c.getNombre().toLowerCase().contains(texto)
-                        || c.getApellido().toLowerCase().contains(texto)
-                        || c.getDni().toLowerCase().contains(texto)) {
-                    modelClientes.addRow(new Object[]{
-                        c.getIdCliente(), c.getNombre(), c.getApellido(),
-                        c.getDni(), c.getTelefono(), c.getDireccion(),
-                        c.getEstado() == 1 ? "Activo" : "Inactivo"
-                    });
+        // BUSCAR en tiempo real
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                String txt = txtBuscar.getText().trim().toLowerCase();
+                modelClientes.setRowCount(0);
+                for (Cliente c : new ClienteDAO().listarTodos()) {
+                    if (c.getNombre().toLowerCase().contains(txt)
+                            || c.getApellido().toLowerCase().contains(txt)
+                            || c.getDni().toLowerCase().contains(txt)) {
+                        modelClientes.addRow(new Object[]{
+                            c.getIdCliente(), c.getNombre(), c.getApellido(),
+                            c.getDni(), c.getTelefono(), c.getDireccion(),
+                            c.getEstado() == 1 ? "Activo" : "Inactivo"
+                        });
+                    }
                 }
+                lblEmptyState.setVisible(modelClientes.getRowCount() == 0);
             }
         });
+        btnNuevo.addActionListener(e -> limpiar());
 
         // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
@@ -192,8 +198,10 @@ public class IFrmGestionClientes extends JInternalFrame {
             String telefono = txtTelefono.getText().trim();
             String correo   = txtCorreo.getText().trim();
 
-            if (nombre.isEmpty() || apellido.isEmpty() || dni.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Nombre, apellido y DNI son obligatorios");
+            // Validación centralizada
+            String error = Validador.validarCliente(nombre, apellido, dni);
+            if (error != null) {
+                JOptionPane.showMessageDialog(this, error, "Campo inválido", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
@@ -280,18 +288,34 @@ public class IFrmGestionClientes extends JInternalFrame {
                 btnDesactivar.setText(estado.equals("Activo") ? "Desactivar" : "Activar");
             }
         });
+
+        // CONSULTAR DNI
+        btnConsultarDni.addActionListener(e -> {
+            String dni = txtDni.getText().trim();
+            if (dni.length() == 8) {
+                String[] datos = ApiClient.consultarDni(dni);
+                if (datos != null) {
+                    txtNombre.setText(datos[0]);
+                    txtApellido.setText(datos[1]);
+                } else {
+                    JOptionPane.showMessageDialog(this, "No se encontró el DNI o error de conexión.");
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "El DNI debe tener 8 dígitos.");
+            }
+        });
     }
 
     private void cargarTabla() {
         modelClientes.setRowCount(0);
-        ClienteDAO dao = new ClienteDAO();
-        for (Cliente c : dao.listarTodos()) {
+        for (Cliente c : new ClienteDAO().listarTodos()) {
             modelClientes.addRow(new Object[]{
                 c.getIdCliente(), c.getNombre(), c.getApellido(),
                 c.getDni(), c.getTelefono(), c.getDireccion(),
                 c.getEstado() == 1 ? "Activo" : "Inactivo"
             });
         }
+        lblEmptyState.setVisible(modelClientes.getRowCount() == 0);
     }
 
     private void limpiar() {

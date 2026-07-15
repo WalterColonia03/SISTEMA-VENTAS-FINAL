@@ -11,12 +11,12 @@ public class ProductoDAO {
     // LISTAR SOLO ACTIVOS
     public List<Producto> listar() {
         List<Producto> lista = new ArrayList<>();
-        String sql = "SELECT idProducto, nombre, descripcion, idCategoria, precio, cantidad FROM producto WHERE estado=1";
+        String sql = "SELECT idProducto, nombre, descripcion, idCategoria, precio, costoPromedio, cantidad FROM producto WHERE estado=1";
         try (Connection con = Conexion.getConexion();
              PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                lista.add(new Producto(
+                Producto p = new Producto(
                     rs.getInt("idProducto"),
                     rs.getString("nombre"),
                     rs.getInt("cantidad"),
@@ -24,7 +24,9 @@ public class ProductoDAO {
                     rs.getString("descripcion"),
                     rs.getInt("idCategoria"),
                     1
-                ));
+                );
+                p.setCostoPromedio(rs.getDouble("costoPromedio"));
+                lista.add(p);
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return lista;
@@ -33,12 +35,12 @@ public class ProductoDAO {
     // LISTAR TODOS (activos e inactivos)
     public List<Producto> listarTodos() {
         List<Producto> lista = new ArrayList<>();
-        String sql = "SELECT idProducto, nombre, descripcion, idCategoria, precio, cantidad, estado FROM producto";
+        String sql = "SELECT idProducto, nombre, descripcion, idCategoria, precio, costoPromedio, cantidad, estado FROM producto";
         try (Connection con = Conexion.getConexion();
              PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                lista.add(new Producto(
+                Producto p = new Producto(
                     rs.getInt("idProducto"),
                     rs.getString("nombre"),
                     rs.getInt("cantidad"),
@@ -46,7 +48,9 @@ public class ProductoDAO {
                     rs.getString("descripcion"),
                     rs.getInt("idCategoria"),
                     rs.getInt("estado")
-                ));
+                );
+                p.setCostoPromedio(rs.getDouble("costoPromedio"));
+                lista.add(p);
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return lista;

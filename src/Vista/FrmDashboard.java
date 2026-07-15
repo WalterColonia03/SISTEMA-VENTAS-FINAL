@@ -28,12 +28,12 @@ public class FrmDashboard extends JFrame {
     private JPanel pnlTopBar;
     private JLabel lblBreadcrumb;
 
-    private JButton btnPOS, btnVentas, btnDevoluciones, btnFidelizacion;
+    private JButton btnPOS, btnVentas, btnDevoluciones, btnFidelizacion, btnCotizaciones;
     private JButton btnClientes, btnProveedores;
     private JButton btnCategorias, btnProductos, btnKardex, btnAlertasInventario, btnRepInventario;
     private JButton btnCompras;
-    private JButton btnFlujoCaja, btnLibroMayor, btnCuentasCP, btnRepVentas;
-    private JButton btnEmpleados, btnPlanilla, btnMarcador;
+    private JButton btnFlujoCaja, btnLibroMayor, btnCuentasCP, btnRepVentas, btnEstadosFinancieros;
+    private JButton btnEmpleados, btnPlanilla, btnMarcador, btnEvaluacion;
     private JButton btnUsuarios, btnAuditoria, btnConfig;
     private JButton btnLogout;
 
@@ -42,6 +42,8 @@ public class FrmDashboard extends JFrame {
     private JLabel lblVentasHoy, lblVentasHoyTx;
     private JLabel lblVentasSemana, lblVentasSemanaTx;
     private JLabel lblAlertasStock, lblAlertasStockDesc;
+    private JLabel lblComprasMes, lblComprasMesDesc;
+    private JLabel lblCxpVencidas, lblCxpVencidasDesc;
 
     private JTable tblAlerts, tblSales;
     private DefaultTableModel modelAlerts, modelSales;
@@ -67,27 +69,30 @@ public class FrmDashboard extends JFrame {
         btnPOS = buildMenuButton("Punto de Venta (POS)");
         btnVentas = buildMenuButton("Gestión de Ventas");
         btnDevoluciones = buildMenuButton("Devoluciones");
-        btnFidelizacion = buildMenuButton("Fidelización");
-        btnClientes = buildMenuButton("Clientes");
-        btnProveedores = buildMenuButton("Proveedores");
-        btnCategorias = buildMenuButton("Categorías");
-        btnProductos = buildMenuButton("Productos");
-        btnKardex = buildMenuButton("Kardex");
-        btnAlertasInventario = buildMenuButton("Alertas de Inventario");
-        btnRepInventario = buildMenuButton("Reporte de Inventario");
-        btnCompras = buildMenuButton("Registro de Compras");
-        btnFlujoCaja = buildMenuButton("Flujo de Caja");
-        btnGestionCaja = buildMenuButton("Gestión de Caja");
-        btnLibroMayor = buildMenuButton("Libro Mayor");
-        btnCuentasCP = buildMenuButton("Cuentas por Cobrar y Pagar");
-        btnRepVentas = buildMenuButton("Reporte de Ventas");
-        btnEmpleados = buildMenuButton("Ficha de Empleados");
-        btnPlanilla = buildMenuButton("Planilla y Asistencia");
-        btnMarcador = buildMenuButton("Marcar Asistencia");
-        btnUsuarios = buildMenuButton("Gestión Usuarios");
-        btnAuditoria = buildMenuButton("Bitácora Auditoría");
-        btnConfig = buildMenuButton("Configuración ERP");
-        btnLogout = buildMenuButton("Cerrar Sesión");
+        btnCotizaciones          = buildMenuButton("Cotizaciones");
+        btnFidelizacion          = buildMenuButton("Fidelización");
+        btnClientes              = buildMenuButton("Clientes");
+        btnProveedores           = buildMenuButton("Proveedores");
+        btnCategorias            = buildMenuButton("Categorías");
+        btnProductos             = buildMenuButton("Productos");
+        btnKardex                = buildMenuButton("Kardex");
+        btnAlertasInventario     = buildMenuButton("Alertas de Inventario");
+        btnRepInventario         = buildMenuButton("Reporte de Inventario");
+        btnCompras               = buildMenuButton("Registro de Compras");
+        btnFlujoCaja             = buildMenuButton("Flujo de Caja");
+        btnGestionCaja           = buildMenuButton("Gestión de Caja");
+        btnLibroMayor            = buildMenuButton("Libro Mayor");
+        btnCuentasCP             = buildMenuButton("Cuentas por Cobrar y Pagar");
+        btnRepVentas             = buildMenuButton("Reporte de Ventas");
+        btnEstadosFinancieros    = buildMenuButton("Estados Financieros");
+        btnEmpleados             = buildMenuButton("Ficha de Empleados");
+        btnPlanilla              = buildMenuButton("Planilla y Asistencia");
+        btnMarcador              = buildMenuButton("Marcar Asistencia");
+        btnEvaluacion            = buildMenuButton("Evaluación de Desempeño");
+        btnUsuarios              = buildMenuButton("Gestión Usuarios");
+        btnAuditoria             = buildMenuButton("Bitácora Auditoría");
+        btnConfig                = buildMenuButton("Configuración ERP");
+        btnLogout                = buildMenuButton("Cerrar Sesión");
         
         
     }
@@ -113,12 +118,12 @@ public class FrmDashboard extends JFrame {
         pnlMenuContainer.setLayout(new BoxLayout(pnlMenuContainer, BoxLayout.Y_AXIS));
         pnlMenuContainer.setBackground(UIKit.PRIMARY);
 
-        pnlMenuContainer.add(navGroup("Ventas", btnPOS, btnVentas, btnDevoluciones, btnFidelizacion));
+        pnlMenuContainer.add(navGroup("Ventas", btnPOS, btnVentas, btnDevoluciones, btnFidelizacion, btnCotizaciones));
         pnlMenuContainer.add(navGroup("Clientes y Proveedores", btnClientes, btnProveedores));
         pnlMenuContainer.add(navGroup("Inventario", btnCategorias, btnProductos, btnKardex, btnAlertasInventario, btnRepInventario));
         pnlMenuContainer.add(navGroup("Compras", btnCompras));
-        pnlMenuContainer.add(navGroup("Finanzas", btnFlujoCaja, btnGestionCaja, btnLibroMayor, btnCuentasCP, btnRepVentas));
-        pnlMenuContainer.add(navGroup("Personal", btnEmpleados, btnPlanilla, btnMarcador));
+        pnlMenuContainer.add(navGroup("Finanzas", btnFlujoCaja, btnGestionCaja, btnLibroMayor, btnCuentasCP, btnRepVentas, btnEstadosFinancieros));
+        pnlMenuContainer.add(navGroup("Personal", btnEmpleados, btnPlanilla, btnMarcador, btnEvaluacion));
         pnlMenuContainer.add(navGroup("Administración", btnUsuarios, btnAuditoria, btnConfig));
         pnlMenuContainer.add(Box.createVerticalGlue());
 
@@ -181,9 +186,12 @@ public class FrmDashboard extends JFrame {
 
         String nombreUsuario = Sesion.getUsuario() != null ? Sesion.getUsuario() : "Admin";
         String rolUsuario = Sesion.getRol() != null ? Sesion.getRol() : "Administrador";
-        JLabel lblUser = new JLabel(nombreUsuario + " (" + rolUsuario + ")");
-        lblUser.setFont(UIKit.BODY);
-        lblUser.setForeground(UIKit.TEXT_SECONDARY);
+        JLabel lblUser = new JLabel(nombreUsuario);
+        lblUser.setFont(UIKit.BODY_BOLD);
+        lblUser.setForeground(UIKit.TEXT_PRIMARY);
+        // Badge de rol — igual al <span className="rounded-full bg-[#6366f1]"> de minimarket
+        JLabel badgeRol = UIKit.statusBadgeSolid(rolUsuario, UIKit.ACCENT);
+        pnlUserInfo.add(badgeRol);
         pnlUserInfo.add(lblUser);
 
         pnlTopBar.add(pnlUserInfo, BorderLayout.EAST);
@@ -203,20 +211,27 @@ public class FrmDashboard extends JFrame {
         pnlContent.setBackground(UIKit.BG_APP);
         pnlContent.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        JPanel pnlCards = new JPanel(new GridLayout(1, 3, 12, 0));
+        JPanel pnlCards = new JPanel(new GridLayout(1, 5, 12, 0));
         pnlCards.setOpaque(false);
         pnlCards.setPreferredSize(new Dimension(0, 90));
 
-        lblVentasHoy = new JLabel("S/ 0.00");
-        lblVentasHoyTx = new JLabel("0 Transacciones");
-        lblVentasSemana = new JLabel("S/ 0.00");
+        lblVentasHoy      = new JLabel("S/ 0.00");
+        lblVentasHoyTx    = new JLabel("0 Transacciones");
+        lblVentasSemana   = new JLabel("S/ 0.00");
         lblVentasSemanaTx = new JLabel("0 Transacciones");
-        lblAlertasStock = new JLabel("0 Productos");
+        lblAlertasStock   = new JLabel("0 Productos");
         lblAlertasStockDesc = new JLabel("Requieren reposición");
 
-        pnlCards.add(buildKpiCard("VENTAS HOY", lblVentasHoy, lblVentasHoyTx, UIKit.ACCENT));
-        pnlCards.add(buildKpiCard("VENTAS SEMANA", lblVentasSemana, lblVentasSemanaTx, UIKit.SUCCESS));
+        lblComprasMes      = new JLabel("S/ 0.00");
+        lblComprasMesDesc  = new JLabel("Este mes");
+        lblCxpVencidas     = new JLabel("0");
+        lblCxpVencidasDesc = new JLabel("Requieren pago");
+
+        pnlCards.add(buildKpiCard("VENTAS HOY",       lblVentasHoy,    lblVentasHoyTx,    UIKit.ACCENT));
+        pnlCards.add(buildKpiCard("VENTAS SEMANA",    lblVentasSemana, lblVentasSemanaTx, UIKit.SUCCESS));
         pnlCards.add(buildKpiCard("ALERTAS DE STOCK", lblAlertasStock, lblAlertasStockDesc, UIKit.WARNING));
+        pnlCards.add(buildKpiCard("COMPRAS DEL MES",  lblComprasMes,   lblComprasMesDesc,   UIKit.PRIMARY));
+        pnlCards.add(buildKpiCard("CxP VENCIDAS",     lblCxpVencidas,  lblCxpVencidasDesc,  UIKit.DANGER));
         pnlContent.add(pnlCards, BorderLayout.NORTH);
 
         JPanel pnlGraficas = new JPanel(new GridLayout(1, 2, 12, 0));
@@ -317,10 +332,9 @@ public class FrmDashboard extends JFrame {
 
     private void cargarKPIs() {
         try (Connection con = Conexion.getConexion()) {
-            if (con == null) {
-                return;
-            }
+            if (con == null) return;
 
+            // Ventas hoy
             PreparedStatement ps = con.prepareStatement(
                     "SELECT COUNT(*) as tx, COALESCE(SUM(total),0) as total "
                     + "FROM Venta WHERE DATE(fecha) = CURDATE() AND estado=1");
@@ -330,6 +344,7 @@ public class FrmDashboard extends JFrame {
                 lblVentasHoyTx.setText(rs.getInt("tx") + " Transacciones");
             }
 
+            // Ventas semana
             ps = con.prepareStatement(
                     "SELECT COUNT(*) as tx, COALESCE(SUM(total),0) as total "
                     + "FROM Venta WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND estado=1");
@@ -339,6 +354,7 @@ public class FrmDashboard extends JFrame {
                 lblVentasSemanaTx.setText(rs.getInt("tx") + " Transacciones");
             }
 
+            // Alertas de stock
             ps = con.prepareStatement(
                     "SELECT COUNT(*) as total FROM producto WHERE cantidad < 10 AND estado=1");
             rs = ps.executeQuery();
@@ -346,6 +362,28 @@ public class FrmDashboard extends JFrame {
                 int alertas = rs.getInt("total");
                 lblAlertasStock.setText(alertas + " Productos");
                 lblAlertasStockDesc.setText(alertas > 0 ? "Requieren reposición" : "Stock OK");
+            }
+
+            // KPI Compras del mes
+            ps = con.prepareStatement(
+                    "SELECT COALESCE(SUM(total),0) as total FROM Compra "
+                    + "WHERE DATE_FORMAT(fecha,'%Y-%m') = DATE_FORMAT(CURDATE(),'%Y-%m')");
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                lblComprasMes.setText(String.format("S/ %.2f", rs.getDouble("total")));
+                lblComprasMesDesc.setText("Este mes");
+            }
+
+            // KPI Cuentas por Pagar vencidas
+            ps = con.prepareStatement(
+                    "SELECT COUNT(*) as cnt FROM CuentasCobrarPagar "
+                    + "WHERE tipo='pagar' AND estado='Pendiente' AND fechaVencimiento < CURDATE()");
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                int venc = rs.getInt("cnt");
+                lblCxpVencidas.setText(venc + " deuda" + (venc != 1 ? "s" : ""));
+                lblCxpVencidasDesc.setText(venc > 0 ? "Requieren pago" : "Al día");
+                lblCxpVencidas.setForeground(venc > 0 ? UIKit.DANGER : UIKit.SUCCESS);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -504,8 +542,8 @@ public class FrmDashboard extends JFrame {
     private JButton buildMenuButton(String text) {
         JButton btn = new JButton("  " + text);
         btn.setFont(UIKit.BODY);
-        btn.setForeground(Color.WHITE);
-        btn.setBackground(UIKit.PRIMARY);
+        btn.setForeground(UIKit.SIDEBAR_TEXT_INACTIVE); // gray-400 inactivo
+        btn.setBackground(UIKit.PRIMARY);               // gray-900
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(true);
@@ -518,21 +556,24 @@ public class FrmDashboard extends JFrame {
 
         btn.addActionListener(e -> {
             if (btnSeleccionado != null) {
+                // Restaurar estado inactivo
                 btnSeleccionado.setBackground(UIKit.PRIMARY);
+                btnSeleccionado.setForeground(UIKit.SIDEBAR_TEXT_INACTIVE);
                 btnSeleccionado.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
             }
             btnSeleccionado = btn;
-            btn.setBackground(UIKit.PRIMARY_DARK);
-            btn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 3, 0, 0, UIKit.ACCENT),
-                    BorderFactory.createEmptyBorder(0, 13, 0, 16)));
+            // Estado activo — fondo ACCENT sólido (indigo), texto blanco
+            btn.setBackground(UIKit.ACCENT);
+            btn.setForeground(Color.WHITE);
+            btn.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
         });
 
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 if (btn != btnSeleccionado) {
-                    btn.setBackground(UIKit.PRIMARY_DARK);
+                    btn.setBackground(UIKit.SIDEBAR_HOVER); // gray-800
+                    btn.setForeground(Color.WHITE);
                 }
             }
 
@@ -540,6 +581,7 @@ public class FrmDashboard extends JFrame {
             public void mouseExited(java.awt.event.MouseEvent e) {
                 if (btn != btnSeleccionado) {
                     btn.setBackground(UIKit.PRIMARY);
+                    btn.setForeground(UIKit.SIDEBAR_TEXT_INACTIVE);
                 }
             }
         });
@@ -550,6 +592,7 @@ public class FrmDashboard extends JFrame {
         btnPOS.addActionListener(e -> openFrame(new IFrmPuntoVenta(), "Punto de Venta"));
         btnVentas.addActionListener(e -> openFrame(new IFrmGestionVentas(), "Gestión de Ventas"));
         btnDevoluciones.addActionListener(e -> openFrame(new IFrmDevoluciones(), "Devoluciones"));
+        btnCotizaciones.addActionListener(e -> openFrame(new IFrmCotizaciones(), "Cotizaciones"));
         btnFidelizacion.addActionListener(e -> openFrame(new IFrmFidelizacion(), "Fidelización"));
         btnClientes.addActionListener(e -> openFrame(new IFrmGestionClientes(), "Gestión de Clientes"));
         btnProveedores.addActionListener(e -> openFrame(new IFrmGestionProveedores(), "Proveedores"));
@@ -567,101 +610,84 @@ public class FrmDashboard extends JFrame {
         btnEmpleados.addActionListener(e -> openFrame(new IFrmFichaEmpleados(), "Empleados"));
         btnPlanilla.addActionListener(e -> openFrame(new IFrmPlanillaAsistencia(), "Planilla y Asistencia"));
         btnMarcador.addActionListener(e -> openFrame(new IFrmMarcadorAsistencia(), "Marcar Asistencia"));
+        btnEvaluacion.addActionListener(e -> openFrame(new IFrmEvaluacionDesempeno(), "Evaluación de Desempeño"));
         btnUsuarios.addActionListener(e -> openFrame(new IFrmGestionUsuarios(), "Usuarios"));
         btnAuditoria.addActionListener(e -> openFrame(new IFrmBitacoraAuditoria(), "Auditoría"));
         btnConfig.addActionListener(e -> openFrame(new IFrmConfiguracionERP(), "Configuración"));
 
-         btnLogout.addActionListener(e -> {
+        btnLogout.addActionListener(e -> {
             int op = JOptionPane.showConfirmDialog(this, "¿Cerrar sesión?", "Salir", JOptionPane.YES_NO_OPTION);
-            if (op == JOptionPane.YES_OPTION) {
+            if (op != JOptionPane.YES_OPTION) return;
 
-                // Marcar salida automática si es Vendedor
-                if (Sesion.getRol().equalsIgnoreCase("Vendedor")) {
-                    if (Sesion.getRol().equalsIgnoreCase("Vendedor")) {
-                    int idEmpleado = Sesion.getIdEmpleado();
-                    String fechaHoy = java.time.LocalDate.now().toString();
-                    String horaActual = java.time.LocalTime.now()
-                        .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
+            // Marcar salida automática si es Vendedor
+            if ("Vendedor".equalsIgnoreCase(Sesion.getRol())) {
+                int idEmpleado = Sesion.getIdEmpleado();
+                String fechaHoy    = java.time.LocalDate.now().toString();
+                String horaActual  = java.time.LocalTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-                    // Marcar salida
-                    DAO.PlanillaDAO planillaDAO = new DAO.PlanillaDAO();
-                    if (planillaDAO.marcarSalida(idEmpleado, fechaHoy, horaActual)) {
-                        JOptionPane.showMessageDialog(FrmDashboard.this,
-                            "Salida registrada a las " + horaActual,
-                            "Asistencia", JOptionPane.INFORMATION_MESSAGE);
-                    }
+                // Marcar salida (una sola vez)
+                DAO.PlanillaDAO planillaDAO = new DAO.PlanillaDAO();
+                if (planillaDAO.marcarSalida(idEmpleado, fechaHoy, horaActual)) {
+                    JOptionPane.showMessageDialog(FrmDashboard.this,
+                        "Salida registrada a las " + horaActual,
+                        "Asistencia", JOptionPane.INFORMATION_MESSAGE);
+                }
 
-                    // Cierre de caja
-                    DAO.CajaChicaDAO cajaDAO = new DAO.CajaChicaDAO();
-                    Object[] caja = cajaDAO.getCajaAbierta(idEmpleado);
-                    if (caja != null) {
-                        double apertura = (double) caja[1];
-                        double ingresos = (double) caja[2];
-                        double egresos  = (double) caja[3];
-                        double esperado = apertura + ingresos - egresos;
+                // Cierre de caja
+                DAO.CajaChicaDAO cajaDAO = new DAO.CajaChicaDAO();
+                Object[] caja = cajaDAO.getCajaAbierta(idEmpleado);
+                if (caja != null) {
+                    double apertura = (double) caja[1];
+                    double ingresos = (double) caja[2];
+                    double egresos  = (double) caja[3];
+                    double esperado = apertura + ingresos - egresos;
 
-                        JPanel panel = new JPanel(new GridLayout(0, 1, 0, 6));
-                        panel.add(new JLabel("Apertura:  S/ " + String.format("%.2f", apertura)));
-                        panel.add(new JLabel("Ventas:     S/ " + String.format("%.2f", ingresos)));
-                        panel.add(new JLabel("Egresos:   S/ " + String.format("%.2f", egresos)));
-                        panel.add(new JLabel("─────────────────"));
-                        panel.add(new JLabel("Esperado: S/ " + String.format("%.2f", esperado)));
-                        panel.add(new JLabel(" "));
-                        panel.add(new JLabel("¿Cuánto hay en caja? (S/)"));
-                        JTextField txtCierre = new JTextField();
-                        txtCierre.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 18));
-                        txtCierre.setHorizontalAlignment(JTextField.CENTER);
-                        panel.add(txtCierre);
-                        panel.add(new JLabel("Observaciones (opcional):"));
-                        JTextField txtObs = new JTextField();
-                        panel.add(txtObs);
+                    JPanel panel = new JPanel(new GridLayout(0, 1, 0, 6));
+                    panel.add(new JLabel("Apertura:  S/ " + String.format("%.2f", apertura)));
+                    panel.add(new JLabel("Ventas:     S/ " + String.format("%.2f", ingresos)));
+                    panel.add(new JLabel("Egresos:   S/ " + String.format("%.2f", egresos)));
+                    panel.add(new JLabel("─────────────────"));
+                    panel.add(new JLabel("Esperado: S/ " + String.format("%.2f", esperado)));
+                    panel.add(new JLabel(" "));
+                    panel.add(new JLabel("¿Cuánto hay en caja? (S/)"));
+                    JTextField txtCierre = new JTextField();
+                    txtCierre.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 18));
+                    txtCierre.setHorizontalAlignment(JTextField.CENTER);
+                    panel.add(txtCierre);
+                    panel.add(new JLabel("Observaciones (opcional):"));
+                    JTextField txtObs = new JTextField();
+                    panel.add(txtObs);
 
-                        int result = JOptionPane.showConfirmDialog(FrmDashboard.this,
-                            panel, "Cierre de Caja", JOptionPane.OK_CANCEL_OPTION);
+                    int result = JOptionPane.showConfirmDialog(FrmDashboard.this,
+                        panel, "Cierre de Caja", JOptionPane.OK_CANCEL_OPTION);
 
-                        if (result == JOptionPane.OK_OPTION) {
-                            try {
-                                double montoCierre = Double.parseDouble(
-                                    txtCierre.getText().trim().replace(",", "."));
-                                double diferencia = montoCierre - esperado;
-                                cajaDAO.cerrarCaja(idEmpleado, montoCierre, txtObs.getText().trim());
+                    if (result == JOptionPane.OK_OPTION) {
+                        try {
+                            double montoCierre = Double.parseDouble(
+                                txtCierre.getText().trim().replace(",", "."));
+                            double diferencia = montoCierre - esperado;
+                            cajaDAO.cerrarCaja(idEmpleado, montoCierre, txtObs.getText().trim());
 
-                                String msg = "Cierre registrado\n" +
-                                    "Esperado: S/ " + String.format("%.2f", esperado) + "\n" +
-                                    "Real: S/ " + String.format("%.2f", montoCierre) + "\n";
-                                if (diferencia == 0) {
-                                    msg += "Diferencia: S/ 0.00 ✔ Cuadrado";
-                                } else if (diferencia > 0) {
-                                    msg += "Sobrante: S/ " + String.format("%.2f", diferencia);
-                                } else {
-                                    msg += "Faltante: S/ " + String.format("%.2f", Math.abs(diferencia));
-                                }
-                                JOptionPane.showMessageDialog(FrmDashboard.this, msg,
-                                    "Cierre de Caja", JOptionPane.INFORMATION_MESSAGE);
-                            } catch (NumberFormatException ex) {
-                                JOptionPane.showMessageDialog(FrmDashboard.this,
-                                    "Monto inválido. La caja quedó abierta.");
-                            }
+                            String msg = "Cierre registrado\n" +
+                                "Esperado: S/ " + String.format("%.2f", esperado) + "\n" +
+                                "Real: S/ "     + String.format("%.2f", montoCierre) + "\n";
+                            if (diferencia == 0)     msg += "Diferencia: S/ 0.00 ✔ Cuadrado";
+                            else if (diferencia > 0) msg += "Sobrante: S/ "  + String.format("%.2f", diferencia);
+                            else                     msg += "Faltante: S/ "  + String.format("%.2f", Math.abs(diferencia));
+                            JOptionPane.showMessageDialog(FrmDashboard.this, msg,
+                                "Cierre de Caja", JOptionPane.INFORMATION_MESSAGE);
+                        } catch (NumberFormatException ex) {
+                            JOptionPane.showMessageDialog(FrmDashboard.this,
+                                "Monto inválido. La caja quedó abierta.");
                         }
                     }
                 }
-                    int idEmpleado = Sesion.getIdEmpleado();
-                    String fechaHoy = java.time.LocalDate.now().toString();
-                    String horaActual = java.time.LocalTime.now()
-                        .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
+            } // fin Vendedor
 
-                    DAO.PlanillaDAO planillaDAO = new DAO.PlanillaDAO();
-                    if (planillaDAO.marcarSalida(idEmpleado, fechaHoy, horaActual)) {
-                        JOptionPane.showMessageDialog(this,
-                            "Salida registrada a las " + horaActual,
-                            "Asistencia", JOptionPane.INFORMATION_MESSAGE);
-                    }
-                }
-
-                new FrmLogin().setVisible(true);
-                this.dispose();
-            }
-         });
+            new FrmLogin().setVisible(true);
+            this.dispose();
+        });
     }
     
 
@@ -711,20 +737,91 @@ public class FrmDashboard extends JFrame {
         });
     }
 
+    /**
+     * RBAC — Sistema de control de acceso basado en roles.
+     *
+     * Mapa de permisos por rol:
+     * ┌───────────────────────────────────────────────────────┐
+     * |                 | Gerente | Vendedor | Almacenero | Contador |
+     * |─────────────────|─────────|──────────|────────────|──────────|
+     * | POS / Ventas    |   ✓     |   ✓      |    ✗      |   ✗     |
+     * | Clientes/Prov.  |   ✓     |   ✓      |    ✓      |   ✗     |
+     * | Inventario      |   ✓     |   ✗      |    ✓      |   ✗     |
+     * | Compras         |   ✓     |   ✗      |    ✓      |   ✗     |
+     * | Finanzas        |   ✓     |   ✗      |    ✗      |   ✓     |
+     * | Personal        |   ✓     |   ✓*     |    ✗      |   ✗     |
+     * | Administración  |   ✓     |   ✗      |    ✗      |   ✗     |
+     * └───────────────────────────────────────────────────────┘
+     * * Solo btnMarcador (marcar su propia asistencia)
+     */
     private void aplicarRol() {
-        String rol = Sesion.getRol();
-        if (rol != null && rol.equalsIgnoreCase("Vendedor")) {
-            btnUsuarios.setVisible(false);
-            btnAuditoria.setVisible(false);
-            btnRepVentas.setVisible(false);
-            btnRepInventario.setVisible(false);
-            btnConfig.setVisible(false);
-            btnCompras.setVisible(false);
-            btnEmpleados.setVisible(false);
-            btnPlanilla.setVisible(false);
-            btnFlujoCaja.setVisible(false);
-            btnLibroMayor.setVisible(false);
-            btnGestionCaja.setVisible(false);
+        String rol = Sesion.getRol() != null ? Sesion.getRol().toLowerCase() : "vendedor";
+
+        // Por defecto, ocultar todo (principio de menor privilegio)
+        JButton[] todos = {
+            btnPOS, btnVentas, btnDevoluciones, btnFidelizacion, btnCotizaciones,
+            btnClientes, btnProveedores,
+            btnCategorias, btnProductos, btnKardex, btnAlertasInventario, btnRepInventario,
+            btnCompras,
+            btnFlujoCaja, btnGestionCaja, btnLibroMayor, btnCuentasCP, btnRepVentas, btnEstadosFinancieros,
+            btnEmpleados, btnPlanilla, btnMarcador, btnEvaluacion,
+            btnUsuarios, btnAuditoria, btnConfig
+        };
+        for (JButton b : todos) b.setVisible(false);
+
+        switch (rol) {
+
+            case "gerente":
+            case "admin":
+            case "administrador":
+                // ACCESO TOTAL
+                for (JButton b : todos) b.setVisible(true);
+                break;
+
+            case "vendedor":
+                // Ventas + Cotizaciones + Clientes + Marcar Asistencia
+                btnPOS.setVisible(true);
+                btnVentas.setVisible(true);
+                btnDevoluciones.setVisible(true);
+                btnFidelizacion.setVisible(true);
+                btnCotizaciones.setVisible(true);
+                btnClientes.setVisible(true);
+                btnMarcador.setVisible(true);
+                break;
+
+            case "almacenero":
+                // Inventario completo + Compras + Proveedores + Clientes (consulta)
+                btnCategorias.setVisible(true);
+                btnProductos.setVisible(true);
+                btnKardex.setVisible(true);
+                btnAlertasInventario.setVisible(true);
+                btnRepInventario.setVisible(true);
+                btnCompras.setVisible(true);
+                btnProveedores.setVisible(true);
+                btnClientes.setVisible(true);
+                btnMarcador.setVisible(true);
+                break;
+
+            case "contador":
+                // Finanzas completa + Reportes + Vista de ventas (solo lectura)
+                btnFlujoCaja.setVisible(true);
+                btnGestionCaja.setVisible(true);
+                btnLibroMayor.setVisible(true);
+                btnCuentasCP.setVisible(true);
+                btnRepVentas.setVisible(true);
+                btnRepInventario.setVisible(true);
+                btnEstadosFinancieros.setVisible(true);
+                btnVentas.setVisible(true);      // Solo historial, no POS
+                btnMarcador.setVisible(true);
+                break;
+
+            default:
+                // Rol desconocido — acceso mínimo (igual que Vendedor)
+                System.err.println("[RBAC] Rol no reconocido: '" + rol + "'. Aplicando permisos mínimos.");
+                btnPOS.setVisible(true);
+                btnVentas.setVisible(true);
+                btnMarcador.setVisible(true);
+                break;
         }
     }
 

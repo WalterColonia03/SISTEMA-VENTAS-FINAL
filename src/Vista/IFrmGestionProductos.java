@@ -4,6 +4,7 @@ import Clases.Categoria;
 import Clases.Producto;
 import DAO.CategoriaDAO;
 import DAO.ProductoDAO;
+import Servicio.Validador;
 import Vista.Estilos.UIKit;
 
 import javax.swing.*;
@@ -237,13 +238,15 @@ public class IFrmGestionProductos extends JInternalFrame {
 
         // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
-            String nombre = txtNombre.getText().trim();
+            String nombre      = txtNombre.getText().trim();
             String descripcion = txtDescripcion.getText().trim();
             String cantidadStr = txtCantidad.getText().trim();
-            String precioStr = txtPrecio.getText().trim();
+            String precioStr   = txtPrecio.getText().trim();
 
-            if (nombre.isEmpty() || cantidadStr.isEmpty() || precioStr.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Nombre, cantidad y precio son obligatorios");
+            // Validación centralizada
+            String error = Validador.validarProducto(nombre, precioStr, cantidadStr);
+            if (error != null) {
+                JOptionPane.showMessageDialog(this, error, "Campo inválido", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
@@ -260,35 +263,31 @@ public class IFrmGestionProductos extends JInternalFrame {
                 }
             }
 
-            try {
-                int cantidad = Integer.parseInt(cantidadStr);
-                double precio = Double.parseDouble(precioStr.replace(",", "."));
-                int idCategoria = obtenerIdCategoria(cbCategoria.getSelectedItem().toString());
+            int cantidad    = Integer.parseInt(cantidadStr);
+            double precio   = Double.parseDouble(precioStr.replace(",", "."));
+            int idCategoria = obtenerIdCategoria(cbCategoria.getSelectedItem().toString());
 
-                ProductoDAO dao = new ProductoDAO();
+            ProductoDAO dao = new ProductoDAO();
 
-                if (txtId.getText().isEmpty()) {
-                    Producto p = new Producto(0, nombre, cantidad, precio, descripcion, idCategoria, 1);
-                    if (dao.insertar(p)) {
-                        JOptionPane.showMessageDialog(this, "Producto agregado correctamente");
-                        cargarTabla();
-                        limpiar();
-                    } else {
-                        JOptionPane.showMessageDialog(this, "Error al agregar producto");
-                    }
+            if (txtId.getText().isEmpty()) {
+                Producto p = new Producto(0, nombre, cantidad, precio, descripcion, idCategoria, 1);
+                if (dao.insertar(p)) {
+                    JOptionPane.showMessageDialog(this, "Producto agregado correctamente");
+                    cargarTabla();
+                    limpiar();
                 } else {
-                    int id = Integer.parseInt(txtId.getText());
-                    Producto p = new Producto(id, nombre, cantidad, precio, descripcion, idCategoria, 1);
-                    if (dao.actualizar(p)) {
-                        JOptionPane.showMessageDialog(this, "Producto actualizado");
-                        cargarTabla();
-                        limpiar();
-                    } else {
-                        JOptionPane.showMessageDialog(this, "Error al actualizar");
-                    }
+                    JOptionPane.showMessageDialog(this, "Error al agregar producto");
                 }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Cantidad y precio deben ser números válidos");
+            } else {
+                int id = Integer.parseInt(txtId.getText());
+                Producto p = new Producto(id, nombre, cantidad, precio, descripcion, idCategoria, 1);
+                if (dao.actualizar(p)) {
+                    JOptionPane.showMessageDialog(this, "Producto actualizado");
+                    cargarTabla();
+                    limpiar();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al actualizar");
+                }
             }
         });
 

@@ -17,6 +17,7 @@ public class IFrmGestionUsuarios extends JInternalFrame {
     private JTable tblUsuarios;
     private DefaultTableModel modelUsuarios;
     private JTextField txtBuscar;
+    private JLabel lblEmptyState;
 
     private JTextField txtId;
     private JTextField txtUsuario;
@@ -24,7 +25,7 @@ public class IFrmGestionUsuarios extends JInternalFrame {
     private JButton btnVerPass;
     private JComboBox<String> cbEmpleado;
 
-    private JButton btnBuscar;
+    private JButton btnNuevo;
     private JButton btnGuardar;
     private JButton btnDesactivar;
     private JButton btnLimpiar;
@@ -41,9 +42,11 @@ public class IFrmGestionUsuarios extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(200, 36));
-        btnBuscar = UIKit.secondaryButton("Buscar");
+        txtBuscar = UIKit.searchField("Buscar usuario o empleado...", null);
+
+        lblEmptyState = new JLabel("No hay usuarios registrados", SwingConstants.CENTER);
+        lblEmptyState.setFont(UIKit.BODY); lblEmptyState.setForeground(UIKit.TEXT_SECONDARY);
+        lblEmptyState.setVisible(false);
 
         // Columna Contraseña oculta en índice 2
         String[] columns = {"ID", "Usuario", "Contraseña", "Empleado", "Cargo", "Estado"};
@@ -51,45 +54,31 @@ public class IFrmGestionUsuarios extends JInternalFrame {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
         tblUsuarios = UIKit.styledTable(modelUsuarios);
-
-        // Ocultar columna contraseña de la vista
         tblUsuarios.getColumnModel().getColumn(2).setMinWidth(0);
         tblUsuarios.getColumnModel().getColumn(2).setMaxWidth(0);
         tblUsuarios.getColumnModel().getColumn(2).setWidth(0);
 
-        txtId = UIKit.readOnlyField();
-        txtId.setEditable(false);
-        txtId.setFocusable(false);
-
+        txtId = UIKit.readOnlyField(); txtId.setEditable(false); txtId.setFocusable(false);
         txtUsuario = UIKit.textField();
-
         txtPassword = new JPasswordField();
         txtPassword.setFont(UIKit.BODY);
         txtPassword.setPreferredSize(new Dimension(0, 36));
         txtPassword.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Contraseña");
 
-        // Botón ver/ocultar contraseña
         btnVerPass = new JButton("👁");
         btnVerPass.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        btnVerPass.setFocusPainted(false);
-        btnVerPass.setContentAreaFilled(false);
-        btnVerPass.setBorderPainted(false);
-        btnVerPass.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnVerPass.setFocusPainted(false); btnVerPass.setContentAreaFilled(false);
+        btnVerPass.setBorderPainted(false); btnVerPass.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnVerPass.addActionListener(e -> {
-            if (txtPassword.getEchoChar() == 0) {
-                txtPassword.setEchoChar('•');
-                btnVerPass.setText("👁");
-            } else {
-                txtPassword.setEchoChar((char) 0);
-                btnVerPass.setText("🙈");
-            }
+            if (txtPassword.getEchoChar() == 0) { txtPassword.setEchoChar('•'); btnVerPass.setText("👁"); }
+            else { txtPassword.setEchoChar((char) 0); btnVerPass.setText("🙈"); }
         });
 
         cbEmpleado = new JComboBox<>();
-        cbEmpleado.setFont(UIKit.BODY);
-        cbEmpleado.setPreferredSize(new Dimension(0, 36));
+        cbEmpleado.setFont(UIKit.BODY); cbEmpleado.setPreferredSize(new Dimension(0, 36));
         cargarEmpleados();
 
+        btnNuevo      = UIKit.primaryButton("+ Nuevo Usuario");
         btnGuardar    = UIKit.primaryButton("Guardar / Actualizar");
         btnLimpiar    = UIKit.secondaryButton("Limpiar / Nuevo");
         btnDesactivar = UIKit.secondaryButton("Desactivar / Activar");
@@ -110,32 +99,26 @@ public class IFrmGestionUsuarios extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        getContentPane().add(
-                UIKit.screenHeader("Gestión de Usuarios", "Administración  ›  Usuarios y Roles"),
-                BorderLayout.NORTH);
+        JPanel pnlTop = new JPanel(new BorderLayout()); pnlTop.setOpaque(false);
+        pnlTop.add(UIKit.screenHeader("Gestión de Usuarios", "Administración  ›  Usuarios y Roles"), BorderLayout.WEST);
+        pnlTop.add(btnNuevo, BorderLayout.EAST);
+        getContentPane().add(pnlTop, BorderLayout.NORTH);
 
-        JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
-        cuerpo.setOpaque(false);
+        JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0)); cuerpo.setOpaque(false);
 
-        // Tabla
         JPanel pnlTabla = UIKit.card();
         pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
 
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
-        pnlBusqueda.setOpaque(false);
-        pnlBusqueda.add(txtBuscar);
-        pnlBusqueda.add(btnBuscar);
+        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlBusqueda.setOpaque(false); pnlBusqueda.add(txtBuscar);
+        pnlTabla.add(UIKit.sectionHeader("Usuarios del Sistema", null), BorderLayout.NORTH);
+        pnlTabla.add(pnlBusqueda, BorderLayout.BEFORE_FIRST_LINE);
 
-        JPanel pnlHeader = new JPanel(new BorderLayout());
-        pnlHeader.setOpaque(false);
-        pnlHeader.add(UIKit.sectionHeader("Usuarios del Sistema", null), BorderLayout.NORTH);
-        pnlHeader.add(pnlBusqueda, BorderLayout.CENTER);
-
-        pnlTabla.add(pnlHeader, BorderLayout.NORTH);
-
+        JPanel pnlWrapper = new JPanel(new BorderLayout()); pnlWrapper.setOpaque(false);
         JScrollPane scroll = new JScrollPane(tblUsuarios);
         scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnlTabla.add(scroll, BorderLayout.CENTER);
+        pnlWrapper.add(scroll, BorderLayout.CENTER); pnlWrapper.add(lblEmptyState, BorderLayout.SOUTH);
+        pnlTabla.add(pnlWrapper, BorderLayout.CENTER);
         cuerpo.add(pnlTabla, BorderLayout.CENTER);
 
         // Formulario
@@ -163,7 +146,7 @@ public class IFrmGestionUsuarios extends JInternalFrame {
         gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, UIKit.SPACE_SM);
         pnlForm.add(UIKit.fieldLabel("Usuario"), gbc);
         gbc.gridx = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
-        pnlForm.add(UIKit.fieldLabel("Contraseña"), gbc);
+        pnlForm.add(UIKit.fieldLabel("Contraseña (dejar vacío = no cambiar)"), gbc);
 
         gbc.gridy = 4; gbc.gridx = 0;
         gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, UIKit.SPACE_SM);
@@ -202,11 +185,13 @@ public class IFrmGestionUsuarios extends JInternalFrame {
 
     private void attachEvents() {
 
-        // BUSCAR
-        btnBuscar.addActionListener(e -> {
-            String texto = txtBuscar.getText().trim().toLowerCase();
-            cargarTablaFiltrada(texto);
+        // BUSCAR en tiempo real
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                cargarTablaFiltrada(txtBuscar.getText().trim().toLowerCase());
+            }
         });
+        btnNuevo.addActionListener(e -> limpiar());
 
         // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
@@ -222,7 +207,12 @@ public class IFrmGestionUsuarios extends JInternalFrame {
             UsuarioDAO dao = new UsuarioDAO();
 
             if (txtId.getText().isEmpty()) {
-                // NUEVO
+                // NUEVO — la contraseña es obligatoria
+                if (pass.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "La contraseña es obligatoria para un usuario nuevo.",
+                        "Campo requerido", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
                 if (dao.insertar(usuario, pass, idEmpleado)) {
                     JOptionPane.showMessageDialog(this, "Usuario creado correctamente");
                     cargarTabla();
@@ -231,14 +221,20 @@ public class IFrmGestionUsuarios extends JInternalFrame {
                     JOptionPane.showMessageDialog(this, "Error al crear. ¿Usuario ya existe?");
                 }
             } else {
-                // ACTUALIZAR contraseña
+                // ACTUALIZAR — contraseña opcional (vacío = no cambia)
                 int id = Integer.parseInt(txtId.getText());
-                if (dao.actualizarContrasena(id, pass)) {
-                    JOptionPane.showMessageDialog(this, "Contraseña actualizada");
-                    cargarTabla();
-                    limpiar();
+                if (!pass.isEmpty()) {
+                    if (dao.actualizarContrasena(id, pass)) {
+                        JOptionPane.showMessageDialog(this, "Contraseña actualizada correctamente");
+                        cargarTabla();
+                        limpiar();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Error al actualizar contraseña");
+                    }
                 } else {
-                    JOptionPane.showMessageDialog(this, "Error al actualizar");
+                    JOptionPane.showMessageDialog(this,
+                        "No se modificó la contraseña (campo vacío).",
+                        "Sin cambios", JOptionPane.INFORMATION_MESSAGE);
                 }
             }
         });
@@ -279,8 +275,9 @@ public class IFrmGestionUsuarios extends JInternalFrame {
                 int row = tblUsuarios.getSelectedRow();
                 txtId.setText(modelUsuarios.getValueAt(row, 0).toString());
                 txtUsuario.setText(modelUsuarios.getValueAt(row, 1).toString());
-                // Cargar contraseña oculta desde columna 2
-                txtPassword.setText(modelUsuarios.getValueAt(row, 2).toString());
+                // No cargamos el hash en el campo contraseña — el usuario ingresa
+                // una nueva si quiere cambiarla, o lo deja vacío para no tocarla
+                txtPassword.setText("");
                 txtPassword.setEchoChar('•');
                 btnVerPass.setText("👁");
 

@@ -1,0 +1,14 @@
+# ─── ERP MiniMarket LAREDO — Configuración de Conexión ─────────────────────────
+# Copia este archivo como "config.properties" en la raíz del proyecto
+# y rellena con tus valores reales. NUNCA subas config.properties al repositorio.
+
+# ─── Base de Datos (MySQL) ──────────────────────────────────────────────────────
+db.url=jdbc:mysql://localhost:3306/sistemaventas?serverTimezone=UTC&useSSL=false
+db.user=root
+db.password=TU_CONTRASEÑA_AQUI
+
+# ─── Seguridad ──────────────────────────────────────────────────────────────────
+# Intentos fallidos antes de bloquear la cuenta
+seguridad.intentos_max=5
+# Minutos de bloqueo tras superar intentos_max
+seguridad.bloqueo_minutos=15

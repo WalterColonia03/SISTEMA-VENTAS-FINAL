@@ -2,6 +2,8 @@ package Vista;
 
 import DAO.ProveedorDAO;
 import DAO.ProveedorDAO.Proveedor;
+import API.ApiClient;
+import Servicio.Validador;
 import Vista.Estilos.UIKit;
 
 import javax.swing.*;
@@ -15,6 +17,7 @@ public class IFrmGestionProveedores extends JInternalFrame {
     private JTable tblProveedores;
     private DefaultTableModel modelProveedores;
     private JTextField txtBuscarRuc;
+    private JLabel lblEmptyState;
 
     private JTextField txtId;
     private JTextField txtRuc;
@@ -23,10 +26,11 @@ public class IFrmGestionProveedores extends JInternalFrame {
     private JTextField txtCorreo;
     private JTextField txtDireccion;
 
-    private JButton btnBuscar;
+    private JButton btnNuevo;
     private JButton btnGuardar;
     private JButton btnEliminar;
     private JButton btnLimpiar;
+    private JButton btnConsultarRuc;
 
     public IFrmGestionProveedores() {
         super("Gestión de Proveedores", true, true, true, true);
@@ -38,15 +42,18 @@ public class IFrmGestionProveedores extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscarRuc = UIKit.textField();
-        txtBuscarRuc.setPreferredSize(new Dimension(200, 36));
-        btnBuscar = UIKit.secondaryButton("Buscar por RUC");
+        txtBuscarRuc = UIKit.searchField("Buscar proveedor por RUC o nombre...", null);
 
         String[] columns = {"ID", "RUC", "Razón Social", "Teléfono", "Correo", "Dirección"};
         modelProveedores = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
         tblProveedores = UIKit.styledTable(modelProveedores);
+
+        lblEmptyState = new JLabel("No hay proveedores registrados", SwingConstants.CENTER);
+        lblEmptyState.setFont(UIKit.BODY);
+        lblEmptyState.setForeground(UIKit.TEXT_SECONDARY);
+        lblEmptyState.setVisible(false);
 
         txtId = UIKit.readOnlyField();
         txtId.setEditable(false);
@@ -57,9 +64,11 @@ public class IFrmGestionProveedores extends JInternalFrame {
         txtCorreo       = UIKit.textField();
         txtDireccion    = UIKit.textField();
 
+        btnNuevo    = UIKit.primaryButton("+ Nuevo Proveedor");
         btnGuardar  = UIKit.primaryButton("Guardar / Actualizar");
         btnLimpiar  = UIKit.secondaryButton("Limpiar / Nuevo");
         btnEliminar = UIKit.dangerOutlineButton("Eliminar");
+        btnConsultarRuc = UIKit.secondaryButton("SUNAT");
     }
 
     private void buildLayout() {
@@ -68,9 +77,12 @@ public class IFrmGestionProveedores extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        getContentPane().add(
-                UIKit.screenHeader("Gestión de Proveedores", "Clientes y Proveedores  ›  Proveedores"),
-                BorderLayout.NORTH);
+        // Sección 5: título izquierda + botón primario derecha
+        JPanel pnlTop = new JPanel(new BorderLayout());
+        pnlTop.setOpaque(false);
+        pnlTop.add(UIKit.screenHeader("Gestión de Proveedores", "Clientes y Proveedores  ›  Proveedores"), BorderLayout.WEST);
+        pnlTop.add(btnNuevo, BorderLayout.EAST);
+        getContentPane().add(pnlTop, BorderLayout.NORTH);
 
         JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
         cuerpo.setOpaque(false);
@@ -79,21 +91,20 @@ public class IFrmGestionProveedores extends JInternalFrame {
         JPanel pnlTabla = UIKit.card();
         pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
 
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         pnlBusqueda.setOpaque(false);
         pnlBusqueda.add(txtBuscarRuc);
-        pnlBusqueda.add(btnBuscar);
 
-        JPanel pnlHeader = new JPanel(new BorderLayout());
-        pnlHeader.setOpaque(false);
-        pnlHeader.add(UIKit.sectionHeader("Listado de Proveedores", null), BorderLayout.NORTH);
-        pnlHeader.add(pnlBusqueda, BorderLayout.CENTER);
+        pnlTabla.add(UIKit.sectionHeader("Listado de Proveedores", null), BorderLayout.NORTH);
+        pnlTabla.add(pnlBusqueda, BorderLayout.BEFORE_FIRST_LINE);
 
-        pnlTabla.add(pnlHeader, BorderLayout.NORTH);
-
+        JPanel pnlTableWrapper = new JPanel(new BorderLayout());
+        pnlTableWrapper.setOpaque(false);
         JScrollPane scroll = new JScrollPane(tblProveedores);
         scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnlTabla.add(scroll, BorderLayout.CENTER);
+        pnlTableWrapper.add(scroll, BorderLayout.CENTER);
+        pnlTableWrapper.add(lblEmptyState, BorderLayout.SOUTH);
+        pnlTabla.add(pnlTableWrapper, BorderLayout.CENTER);
         cuerpo.add(pnlTabla, BorderLayout.CENTER);
 
         // Formulario
@@ -123,7 +134,11 @@ public class IFrmGestionProveedores extends JInternalFrame {
         gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, UIKit.SPACE_SM);
         pnlForm.add(txtId, gbc);
         gbc.gridx = 1; gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
-        pnlForm.add(txtRuc, gbc);
+        JPanel pnlRuc = new JPanel(new BorderLayout(5, 0));
+        pnlRuc.setOpaque(false);
+        pnlRuc.add(txtRuc, BorderLayout.CENTER);
+        pnlRuc.add(btnConsultarRuc, BorderLayout.EAST);
+        pnlForm.add(pnlRuc, gbc);
 
         // Razón Social
         gbc.gridwidth = 2; gbc.gridx = 0;
@@ -171,33 +186,37 @@ public class IFrmGestionProveedores extends JInternalFrame {
 
     private void attachEvents() {
 
-        // BUSCAR POR RUC
-        btnBuscar.addActionListener(e -> {
-            String ruc = txtBuscarRuc.getText().trim();
-            if (ruc.isEmpty()) {
-                cargarTabla();
-                return;
-            }
-            ProveedorDAO dao = new ProveedorDAO();
-            Proveedor p = dao.buscarPorRuc(ruc);
-            modelProveedores.setRowCount(0);
-            if (p != null) {
-                modelProveedores.addRow(new Object[]{
-                    p.idProveedor, p.ruc, p.razonSocial,
-                    p.telefono, p.correo, p.direccion
-                });
-            } else {
-                JOptionPane.showMessageDialog(this, "No se encontró proveedor con ese RUC");
+        // BUSCAR en tiempo real por RUC o razón social
+        txtBuscarRuc.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                String texto = txtBuscarRuc.getText().trim().toLowerCase();
+                modelProveedores.setRowCount(0);
+                ProveedorDAO dao = new ProveedorDAO();
+                for (Proveedor p : dao.listar()) {
+                    if (p.ruc.contains(texto) || p.razonSocial.toLowerCase().contains(texto)) {
+                        modelProveedores.addRow(new Object[]{
+                            p.idProveedor, p.ruc, p.razonSocial,
+                            p.telefono, p.correo, p.direccion
+                        });
+                    }
+                }
+                boolean vacio = modelProveedores.getRowCount() == 0;
+                lblEmptyState.setVisible(vacio);
             }
         });
 
+        // Botón Nuevo
+        btnNuevo.addActionListener(e -> limpiar());
+
         // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
-            String ruc          = txtRuc.getText().trim();
-            String razonSocial  = txtRazonSocial.getText().trim();
+            String ruc         = txtRuc.getText().trim();
+            String razonSocial = txtRazonSocial.getText().trim();
 
-            if (ruc.isEmpty() || razonSocial.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "RUC y Razón Social son obligatorios");
+            // Validación centralizada
+            String error = Validador.validarProveedor(razonSocial, ruc);
+            if (error != null) {
+                JOptionPane.showMessageDialog(this, error, "Campo inválido", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
@@ -263,6 +282,22 @@ public class IFrmGestionProveedores extends JInternalFrame {
                 txtDireccion.setText(modelProveedores.getValueAt(row, 5).toString());
             }
         });
+
+        // CONSULTAR RUC
+        btnConsultarRuc.addActionListener(e -> {
+            String ruc = txtRuc.getText().trim();
+            if (ruc.length() == 11) {
+                String[] datos = ApiClient.consultarRuc(ruc);
+                if (datos != null) {
+                    txtRazonSocial.setText(datos[0]);
+                    txtDireccion.setText(datos[1]);
+                } else {
+                    JOptionPane.showMessageDialog(this, "No se encontró el RUC o error de conexión.");
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "El RUC debe tener 11 dígitos.");
+            }
+        });
     }
 
     private void cargarTabla() {
@@ -274,6 +309,8 @@ public class IFrmGestionProveedores extends JInternalFrame {
                 p.telefono, p.correo, p.direccion
             });
         }
+        boolean vacio = modelProveedores.getRowCount() == 0;
+        lblEmptyState.setVisible(vacio);
     }
 
     private void limpiar() {

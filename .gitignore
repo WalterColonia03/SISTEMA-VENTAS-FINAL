@@ -8,3 +8,7 @@ nbproject/private/
 # Archivos de SO
 .DS_Store
 Thumbs.db
+
+# Credenciales locales — NUNCA subir al repositorio
+# (usa config.properties.example como plantilla)
+config.properties

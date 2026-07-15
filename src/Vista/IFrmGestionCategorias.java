@@ -14,12 +14,13 @@ public class IFrmGestionCategorias extends JInternalFrame {
     private JTable tblCategorias;
     private DefaultTableModel modelCategorias;
     private JTextField txtBuscar;
+    private JLabel lblEmptyState;
 
     private JTextField txtId;
     private JTextField txtDescripcion;
     private JComboBox<String> cbEstado;
 
-    private JButton btnBuscar;
+    private JButton btnNuevo;
     private JButton btnGuardar;
     private JButton btnLimpiar;
     private JButton btnReactivar;
@@ -34,15 +35,20 @@ public class IFrmGestionCategorias extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(200, 36));
-        btnBuscar = UIKit.secondaryButton("Buscar");
+        // Sección 5 del prompt: searchField con ícono incrustado, max 260px
+        txtBuscar = UIKit.searchField("Buscar categoría...", null);
 
         String[] columns = {"ID", "Descripción", "Estado"};
         modelCategorias = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
         tblCategorias = UIKit.styledTable(modelCategorias);
+
+        // Estado vacío
+        lblEmptyState = new JLabel("No hay categorías registradas", SwingConstants.CENTER);
+        lblEmptyState.setFont(UIKit.BODY);
+        lblEmptyState.setForeground(UIKit.TEXT_SECONDARY);
+        lblEmptyState.setVisible(false);
 
         txtId          = UIKit.readOnlyField();
         txtId.setEditable(false);
@@ -52,6 +58,8 @@ public class IFrmGestionCategorias extends JInternalFrame {
         cbEstado = new JComboBox<>(new String[]{"Activo", "Inactivo"});
         cbEstado.setFont(UIKit.BODY);
 
+        // Sección 5 del prompt: botón primario "+ Nueva Categoría"
+        btnNuevo   = UIKit.primaryButton("+ Nueva Categoría");
         btnGuardar   = UIKit.primaryButton("Guardar / Actualizar");
         btnLimpiar   = UIKit.secondaryButton("Limpiar / Nuevo");
         btnReactivar = UIKit.secondaryButton("Reactivar / Desactivar");
@@ -63,9 +71,12 @@ public class IFrmGestionCategorias extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        getContentPane().add(
-                UIKit.screenHeader("Gestión de Categorías", "Inventario  ›  Categorías"),
-                BorderLayout.NORTH);
+        // Sección 5 del prompt: título izquierda + botón primario derecha
+        JPanel pnlTop = new JPanel(new BorderLayout());
+        pnlTop.setOpaque(false);
+        pnlTop.add(UIKit.screenHeader("Gestión de Categorías", "Inventario  ›  Categorías"), BorderLayout.WEST);
+        pnlTop.add(btnNuevo, BorderLayout.EAST);
+        getContentPane().add(pnlTop, BorderLayout.NORTH);
 
         JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
         cuerpo.setOpaque(false);
@@ -74,16 +85,21 @@ public class IFrmGestionCategorias extends JInternalFrame {
         JPanel pnlTabla = UIKit.card();
         pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
 
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
+        // Sección 5: buscador angosto a la izquierda, no estirado
+        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         pnlBusqueda.setOpaque(false);
         pnlBusqueda.add(txtBuscar);
-        pnlBusqueda.add(btnBuscar);
 
-        pnlTabla.add(UIKit.sectionHeader("Listado de Categorías", pnlBusqueda), BorderLayout.NORTH);
+        pnlTabla.add(UIKit.sectionHeader("Listado de Categorías", null), BorderLayout.NORTH);
+        pnlTabla.add(pnlBusqueda, BorderLayout.BEFORE_FIRST_LINE);
 
+        JPanel pnlTableWrapper = new JPanel(new BorderLayout());
+        pnlTableWrapper.setOpaque(false);
         JScrollPane scroll = new JScrollPane(tblCategorias);
         scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnlTabla.add(scroll, BorderLayout.CENTER);
+        pnlTableWrapper.add(scroll, BorderLayout.CENTER);
+        pnlTableWrapper.add(lblEmptyState, BorderLayout.SOUTH);
+        pnlTabla.add(pnlTableWrapper, BorderLayout.CENTER);
         cuerpo.add(pnlTabla, BorderLayout.CENTER);
 
         // Formulario
@@ -131,21 +147,15 @@ public class IFrmGestionCategorias extends JInternalFrame {
 
     private void attachEvents() {
 
-        // BUSCAR
-        btnBuscar.addActionListener(e -> {
-            String texto = txtBuscar.getText().trim().toLowerCase();
-            modelCategorias.setRowCount(0);
-            CategoriaDAO dao = new CategoriaDAO();
-            for (Categoria c : dao.listarTodas()) {
-                if (c.getDescripcion().toLowerCase().contains(texto)) {
-                    modelCategorias.addRow(new Object[]{
-                        c.getIdCategoria(),
-                        c.getDescripcion(),
-                        c.getEstado() == 1 ? "Activo" : "Inactivo"
-                    });
-                }
+        // BUSCAR en tiempo real
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                filtrarTabla(txtBuscar.getText().trim().toLowerCase());
             }
         });
+
+        // Botón Nuevo: limpia el formulario para alta
+        btnNuevo.addActionListener(e -> limpiar());
 
         // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
@@ -255,6 +265,27 @@ public class IFrmGestionCategorias extends JInternalFrame {
                 c.getEstado() == 1 ? "Activo" : "Inactivo"
             });
         }
+        actualizarEstadoVacio();
+    }
+
+    private void filtrarTabla(String filtro) {
+        modelCategorias.setRowCount(0);
+        CategoriaDAO dao = new CategoriaDAO();
+        for (Categoria c : dao.listarTodas()) {
+            if (c.getDescripcion().toLowerCase().contains(filtro)) {
+                modelCategorias.addRow(new Object[]{
+                    c.getIdCategoria(),
+                    c.getDescripcion(),
+                    c.getEstado() == 1 ? "Activo" : "Inactivo"
+                });
+            }
+        }
+        actualizarEstadoVacio();
+    }
+
+    private void actualizarEstadoVacio() {
+        boolean vacio = modelCategorias.getRowCount() == 0;
+        lblEmptyState.setVisible(vacio);
     }
 
     private void limpiar() {

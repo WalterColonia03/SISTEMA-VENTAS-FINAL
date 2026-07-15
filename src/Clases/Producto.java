@@ -10,9 +10,9 @@ public class Producto {
     private String nombre;
     private int cantidad;
     private double precio;
+    private double costoPromedio; // GAP 6+8
     private String descripcion;
     private int idCategoria;
-    //private int igv;
     private int estado;
 
     public Producto(int idProducto, String nombre, int cantidad, double precio, String descripcion, int idCategoria, int estado) {
@@ -80,6 +80,14 @@ public class Producto {
 
     public void setEstado(int estado) {
         this.estado = estado;
+    }
+
+    public double getCostoPromedio() {
+        return costoPromedio;
+    }
+
+    public void setCostoPromedio(double costoPromedio) {
+        this.costoPromedio = costoPromedio;
     }
 
     //public int getIgv() {

@@ -3,9 +3,10 @@ package Vista;
 import Clases.Cliente;
 import Clases.Producto;
 import DAO.ClienteDAO;
-import DAO.KardexDAO;
 import DAO.ProductoDAO;
-import DAO.VentaDAO;
+import Servicio.VentaService;
+import Servicio.VentaService.ItemVenta;
+import API.ApiClient;
 import Vista.Estilos.UIKit;
 
 import javax.swing.*;
@@ -36,6 +37,11 @@ public class IFrmPuntoVenta extends JInternalFrame {
     private JTextField txtMontoCliente;
     private JLabel lblVuelto;
     private JLabel lblVueltoValor;
+
+    // BOLETA / FACTURA
+    private JComboBox<String> cbTipoComprobante;
+    private JTextField txtRucEmpresa;
+    private JLabel lblRucEmpresa;
 
     private int idClienteActivo = 0;
     private JTextField txtNroOperacion;
@@ -110,6 +116,17 @@ public class IFrmPuntoVenta extends JInternalFrame {
         txtNroOperacion.setEnabled(false);
         lblNroOperacion = UIKit.fieldLabel("N° de Operación");
         lblNroOperacion.setEnabled(false);
+
+        // Boleta / Factura
+        cbTipoComprobante = new JComboBox<>(new String[]{"Boleta", "Factura"});
+        cbTipoComprobante.setFont(UIKit.BODY);
+        cbTipoComprobante.setPreferredSize(new Dimension(0, 36));
+        txtRucEmpresa = UIKit.textField();
+        txtRucEmpresa.setPreferredSize(new Dimension(0, 36));
+        txtRucEmpresa.putClientProperty("JTextField.placeholderText", "RUC (11 dígitos)");
+        txtRucEmpresa.setEnabled(false);
+        lblRucEmpresa = UIKit.fieldLabel("RUC Empresa *");
+        lblRucEmpresa.setEnabled(false);
         
         btnAgregar = UIKit.secondaryButton("Agregar");
         btnBuscarCliente = UIKit.secondaryButton("Buscar");
@@ -266,10 +283,25 @@ public class IFrmPuntoVenta extends JInternalFrame {
 
         
         gbc.gridy = 15;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        JLabel lblTipoComp = new JLabel("TIPO COMPROBANTE");
+        lblTipoComp.setFont(UIKit.BODY_BOLD); lblTipoComp.setForeground(UIKit.TEXT_SECONDARY);
+        pnlDerecha.add(lblTipoComp, gbc);
+        gbc.gridy = 16;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlDerecha.add(cbTipoComprobante, gbc);
+        gbc.gridy = 17;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_XS, 0);
+        pnlDerecha.add(lblRucEmpresa, gbc);
+        gbc.gridy = 18;
+        gbc.insets = new Insets(0, 0, UIKit.SPACE_LG, 0);
+        pnlDerecha.add(txtRucEmpresa, gbc);
+
+        gbc.gridy = 19;
         gbc.insets = new Insets(0, 0, UIKit.SPACE_MD, 0);
         pnlDerecha.add(btnRegistrar, gbc);
 
-        gbc.gridy = 16;
+        gbc.gridy = 20;
         gbc.weighty = 1.0;
         gbc.anchor = GridBagConstraints.NORTH;
         gbc.insets = new Insets(0, 0, 0, 0);
@@ -325,7 +357,15 @@ public class IFrmPuntoVenta extends JInternalFrame {
                 lblVueltoValor.setForeground(Color.LIGHT_GRAY);
             }
         });
-       
+
+        // TIPO COMPROBANTE — activar RUC solo si es Factura
+        cbTipoComprobante.addActionListener(e -> {
+            boolean esFactura = "Factura".equals(cbTipoComprobante.getSelectedItem());
+            txtRucEmpresa.setEnabled(esFactura);
+            lblRucEmpresa.setEnabled(esFactura);
+            if (!esFactura) txtRucEmpresa.setText("");
+        });
+
         // CALCULAR VUELTO al escribir monto
         txtMontoCliente.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
@@ -378,9 +418,26 @@ public class IFrmPuntoVenta extends JInternalFrame {
             idClienteActivo = c.getIdCliente();
             lblNombreCliente.setText(c.getNombre() + " " + c.getApellido());
         } else {
+            // Si no está en BD local, buscar en RENIEC mediante la API
+            if (dni.length() == 8) {
+                String[] datos = ApiClient.consultarDni(dni);
+                if (datos != null) {
+                    // Guardar automáticamente en la BD local para futuras ventas
+                    Cliente nuevo = new Cliente(0, datos[0], datos[1], dni, "", "", 1);
+                    if (dao.insertar(nuevo)) {
+                        c = dao.buscarPorDni(dni); // Recuperar para obtener el ID asignado
+                        if (c != null) {
+                            idClienteActivo = c.getIdCliente();
+                            lblNombreCliente.setText(c.getNombre() + " " + c.getApellido());
+                            JOptionPane.showMessageDialog(this, "Cliente nuevo importado desde RENIEC correctamente.", "RENIEC", JOptionPane.INFORMATION_MESSAGE);
+                            return;
+                        }
+                    }
+                }
+            }
             idClienteActivo = 0;
             lblNombreCliente.setText("Consumidor Final");
-            JOptionPane.showMessageDialog(this, "Cliente no encontrado");
+            JOptionPane.showMessageDialog(this, "Cliente no encontrado en BD ni en RENIEC.", "No encontrado", JOptionPane.WARNING_MESSAGE);
         }
     }
 
@@ -462,11 +519,23 @@ public class IFrmPuntoVenta extends JInternalFrame {
         }
 
         String metodo = cbMetodoPago.getSelectedItem().toString();
+        String tipoComp = cbTipoComprobante.getSelectedItem().toString();
+        String rucEmpresa = txtRucEmpresa.getText().trim();
         double total = calcularSubtotal();
         double subtotal = total / 1.18;
         double igv = total / 1.18 * 0.18;
 
-        
+        // Validar RUC si es Factura
+        if ("Factura".equals(tipoComp)) {
+            if (rucEmpresa.isEmpty() || !rucEmpresa.matches("\\d{11}")) {
+                JOptionPane.showMessageDialog(this,
+                    "Para emitir Factura debe ingresar el RUC de la empresa (11 dígitos).",
+                    "RUC Requerido", JOptionPane.WARNING_MESSAGE);
+                txtRucEmpresa.requestFocus();
+                return;
+            }
+        }
+
         // Validar según método de pago
         if (metodo.equals("Efectivo")) {
             String montoStr = txtMontoCliente.getText().trim().replace(",", ".");
@@ -516,11 +585,12 @@ public class IFrmPuntoVenta extends JInternalFrame {
         // CONFIRMACIÓN antes de cobrar
         int confirm = JOptionPane.showConfirmDialog(this,
                 "¿Confirmar la venta?\n\n"
+                + "Comprobante: " + tipoComp + ("Factura".equals(tipoComp) ? " (RUC: " + rucEmpresa + ")" : "") + "\n"
                 + "Cliente: " + lblNombreCliente.getText() + "\n"
                 + "Subtotal (sin IGV): S/ " + String.format("%.2f", subtotal) + "\n"
                 + "IGV incluido (18%): S/ " + String.format("%.2f", igv) + "\n"
                 + "Total: S/ " + String.format("%.2f", total) + "\n"
-                + "Método: " + metodo   
+                + "Método: " + metodo
                 + vueltoStr
                 + nroOpStr,
                 "Confirmar Venta",
@@ -531,52 +601,39 @@ public class IFrmPuntoVenta extends JInternalFrame {
             return;
         }
 
-        // REGISTRAR
+        // REGISTRAR — delegar al servicio (igual que inventario.service.js)
         int idCliente = idClienteActivo > 0 ? idClienteActivo : 1;
-        int idUsuario = 1;
 
-        VentaDAO ventaDAO = new VentaDAO();
-        int idVenta = ventaDAO.insertar(idCliente, idUsuario, subtotal, igv, total, metodo);
-
-        if (idVenta == -1) {
-            JOptionPane.showMessageDialog(this, "Error al registrar la venta");
-            return;
-        }
-
-        ProductoDAO productoDAO = new ProductoDAO();
-        KardexDAO kardexDAO = new KardexDAO();
-
+        // Construir lista de ítems desde el carrito
+        java.util.List<ItemVenta> items = new java.util.ArrayList<>();
         for (int i = 0; i < modelCarrito.getRowCount(); i++) {
-            int idProducto = Integer.parseInt(modelCarrito.getValueAt(i, 0).toString());
-            int cantidad = Integer.parseInt(modelCarrito.getValueAt(i, 3).toString());
-            double precio = Double.parseDouble(modelCarrito.getValueAt(i, 2).toString().replace(",", "."));
-            double sub = Double.parseDouble(modelCarrito.getValueAt(i, 4).toString().replace(",", "."));
-
-            ventaDAO.insertarDetalle(idVenta, idProducto, cantidad, precio, 0, sub);
-
-            Producto p = productoDAO.listar().stream()
-                    .filter(prod -> prod.getIdProducto() == idProducto)
-                    .findFirst().orElse(null);
-
-            if (p != null) {
-                int stockAnterior = p.getCantidad();
-                int stockNuevo = stockAnterior - cantidad;
-                productoDAO.actualizarStock(idProducto, stockNuevo);
-                kardexDAO.registrar(idProducto, "SALIDA", cantidad,
-                        stockAnterior, stockNuevo, "VENTA #" + idVenta, idUsuario);
-            }
+            int    idProducto = Integer.parseInt(modelCarrito.getValueAt(i, 0).toString());
+            double precio     = Double.parseDouble(modelCarrito.getValueAt(i, 2).toString().replace(",", "."));
+            int    cantidad   = Integer.parseInt(modelCarrito.getValueAt(i, 3).toString());
+            items.add(new ItemVenta(idProducto, cantidad, precio));
         }
 
-        JOptionPane.showMessageDialog(this,
-                "Venta registrada correctamente\n"
-                + "N° Venta: #" + idVenta + "\n"
-                + "Total: S/ " + String.format("%.2f", total) + "\n"
-                + "Método: " + metodo
-                + vueltoStr
-                + nroOpStr,
-                "Venta Exitosa", JOptionPane.INFORMATION_MESSAGE);
+        VentaService service = new VentaService();
+        try {
+            int idVenta = service.registrarVenta(idCliente, metodo, items);
 
-        cancelarVenta();
+            JOptionPane.showMessageDialog(this,
+                    "Venta registrada correctamente\n"
+                    + "N° Venta: #" + idVenta + "\n"
+                    + "Comprobante: " + tipoComp + "\n"
+                    + "Total: S/ " + String.format("%.2f", total) + "\n"
+                    + "Método: " + metodo
+                    + vueltoStr
+                    + nroOpStr,
+                    "Venta Exitosa", JOptionPane.INFORMATION_MESSAGE);
+
+            cancelarVenta();
+
+        } catch (VentaService.VentaException ex) {
+            JOptionPane.showMessageDialog(this,
+                    ex.getMessage(),
+                    "Error en la Venta", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void recalcularTotal() {
@@ -616,5 +673,9 @@ public class IFrmPuntoVenta extends JInternalFrame {
         lblVueltoValor.setText("S/ 0.00");
         idClienteActivo = 0;
         txtNroOperacion.setText("");
+        cbTipoComprobante.setSelectedIndex(0);
+        txtRucEmpresa.setText("");
+        txtRucEmpresa.setEnabled(false);
+        lblRucEmpresa.setEnabled(false);
     }
 }

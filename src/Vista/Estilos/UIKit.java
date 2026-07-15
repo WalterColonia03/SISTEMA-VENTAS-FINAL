@@ -7,29 +7,28 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 
-/**
- * Sistema de diseño centralizado del ERP Minimarket LAREDO.
- * Toda pantalla nueva o rediseñada debe construir su UI usando
- * estos tokens y fábricas — nunca colores/fuentes sueltos.
- */
 public final class UIKit {
 
     private UIKit() {}
 
-    // ===================== PALETA =====================
-    public static final Color PRIMARY        = new Color(0x1B3B6F);
-    public static final Color PRIMARY_DARK    = new Color(0x142B52);
-    public static final Color ACCENT          = new Color(0x2D6CDF);
-    public static final Color ACCENT_HOVER    = new Color(0x1E54B7);
-    public static final Color BG_APP          = new Color(0xF5F6F8);
+    // ===================== PALETA (alineada a minimarket) =====================
+    public static final Color PRIMARY        = new Color(0x111827); // gray-900
+    public static final Color PRIMARY_DARK    = new Color(0x0B0F19);
+    public static final Color ACCENT          = new Color(0x6366F1); // indigo-500
+    public static final Color ACCENT_HOVER    = new Color(0x4F46E5); // indigo-600
+    public static final Color BG_APP          = new Color(0xF9FAFB); // gray-50
     public static final Color BG_CARD         = Color.WHITE;
-    public static final Color BORDER          = new Color(0xE1E4E8);
-    public static final Color TEXT_PRIMARY    = new Color(0x1F2733);
-    public static final Color TEXT_SECONDARY  = new Color(0x5B6472);
-    public static final Color SUCCESS         = new Color(0x1E8E5A);
-    public static final Color WARNING         = new Color(0xF2994A);
-    public static final Color DANGER          = new Color(0xD64550);
+    public static final Color BORDER          = new Color(0xE5E7EB); // gray-200
+    public static final Color TEXT_PRIMARY    = new Color(0x1F2937); // gray-800
+    public static final Color TEXT_SECONDARY  = new Color(0x6B7280); // gray-500
+    public static final Color SUCCESS         = new Color(0x16A34A); // green-600
+    public static final Color WARNING         = new Color(0xD97706); // amber-600
+    public static final Color DANGER          = new Color(0xDC2626); // red-600
     public static final Color INFO            = ACCENT;
+
+    public static final Color SIDEBAR_BG            = new Color(0x111827); // gray-900
+    public static final Color SIDEBAR_HOVER         = new Color(0x1F2937); // gray-800
+    public static final Color SIDEBAR_TEXT_INACTIVE = new Color(0x9CA3AF); // gray-400
 
     // ===================== TIPOGRAFÍA =====================
     private static final String FAM = "Segoe UI";
@@ -93,6 +92,40 @@ public final class UIKit {
         return b;
     }
 
+    // ===================== BOTÓN DE SOLO ÍCONO =====================
+    public static JButton iconButton(Icon icon, Color tint, Color hoverBg, String tooltip) {
+        JButton b = new JButton(icon);
+        b.setToolTipText(tooltip);
+        b.setForeground(tint);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setContentAreaFilled(true);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setMargin(new Insets(6, 6, 6, 6));
+        b.putClientProperty(FlatClientProperties.STYLE,
+                "arc: 8; background: " + hex(BG_CARD) + "; hoverBackground: " + hex(hoverBg) + ";");
+        return b;
+    }
+
+    public static JButton editIconButton(Icon icon) {
+        return iconButton(icon, ACCENT, mezclarConBlanco(ACCENT, 0.9f), "Editar");
+    }
+
+    public static JButton deleteIconButton(Icon icon) {
+        return iconButton(icon, DANGER, mezclarConBlanco(DANGER, 0.9f), "Eliminar");
+    }
+
+    // ===================== CAMPO DE BÚSQUEDA =====================
+    public static JTextField searchField(String placeholder, Icon searchIcon) {
+        JTextField tf = textField();
+        tf.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, placeholder);
+        if (searchIcon != null) {
+            tf.putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_ICON, searchIcon);
+        }
+        tf.setPreferredSize(new Dimension(260, 36));
+        return tf;
+    }
+
     // ===================== CAMPOS DE FORMULARIO =====================
     public static JLabel fieldLabel(String text) {
         JLabel l = new JLabel(text.toUpperCase());
@@ -110,7 +143,6 @@ public final class UIKit {
         return tf;
     }
 
-    /** Campo de solo lectura (reemplaza el patrón "JTextField deshabilitado gris" actual). */
     public static JTextField readOnlyField() {
         JTextField tf = textField();
         tf.setEditable(false);
@@ -120,7 +152,6 @@ public final class UIKit {
     }
 
     // ===================== TARJETAS / SECCIONES =====================
-    /** Tarjeta blanca con borde sutil, usada para envolver tablas, formularios y bloques. */
     public static JPanel card() {
         JPanel p = new JPanel();
         p.setBackground(BG_CARD);
@@ -131,7 +162,6 @@ public final class UIKit {
         return p;
     }
 
-    /** Encabezado estándar de una tarjeta de sección (título + opcional acción a la derecha). */
     public static JPanel sectionHeader(String title, JComponent trailingAction) {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
@@ -144,7 +174,6 @@ public final class UIKit {
         return header;
     }
 
-    /** Encabezado de pantalla: H1 + subtítulo/breadcrumb. */
     public static JPanel screenHeader(String titulo, String breadcrumb) {
         JPanel p = new JPanel();
         p.setOpaque(false);
@@ -196,25 +225,43 @@ public final class UIKit {
         return card;
     }
 
-    // ===================== BADGE DE ESTADO =====================
-    public static JLabel statusBadge(String texto, Color color) {
-        JLabel badge = new JLabel(texto);
-        badge.setFont(CAPTION);
-        badge.setForeground(color);
+    // ===================== BADGES (pintado manual con Graphics2D — no usa arc en JLabel) =====================
+    private static JLabel pill(String texto, Color bg, Color fg) {
+        JLabel badge = new JLabel(texto) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
         badge.setOpaque(false);
+        badge.setFont(CAPTION);
+        badge.setForeground(fg);
+        badge.setBackground(bg);
         badge.setHorizontalAlignment(SwingConstants.CENTER);
-        badge.setBorder(new EmptyBorder(3, 10, 3, 10));
-        badge.putClientProperty(FlatClientProperties.STYLE,
-                "arc: 999; background: " + hex(mezclarConBlanco(color, 0.85f)) + ";");
-        badge.setOpaque(true);
+        badge.setBorder(new EmptyBorder(4, 10, 4, 10));
         return badge;
     }
 
-    // ===================== TABLAS =====================
+    /** Badge suave: fondo tenue + texto de color. Para estados dentro de tablas. */
+    public static JLabel statusBadge(String texto, Color color) {
+        return pill(texto, mezclarConBlanco(color, 0.85f), color);
+    }
+
+    /** Badge sólido: fondo pleno + texto blanco, como el badge de rol de minimarket. */
+    public static JLabel statusBadgeSolid(String texto, Color bg) {
+        return pill(texto, bg, Color.WHITE);
+    }
+
+    // ===================== TABLAS (cabecera indigo sólida, cebra) =====================
     public static JTable styledTable(DefaultTableModel model) {
         JTable table = new JTable(model);
         table.setFont(BODY);
-        table.setRowHeight(34);
+        table.setRowHeight(36);
         table.setShowGrid(false);
         table.setIntercellSpacing(new Dimension(0, 0));
         table.setSelectionBackground(mezclarConBlanco(ACCENT, 0.88f));
@@ -222,20 +269,28 @@ public final class UIKit {
         table.setFillsViewportHeight(true);
 
         JTableHeader header = table.getTableHeader();
-        header.setFont(LABEL);
-        header.setBackground(BG_APP);
-        header.setForeground(TEXT_SECONDARY);
-        header.setPreferredSize(new Dimension(0, 38));
+        header.setPreferredSize(new Dimension(0, 40));
         header.setReorderingAllowed(false);
+        header.setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+                c.setBackground(ACCENT);
+                c.setForeground(Color.WHITE);
+                c.setFont(BODY_BOLD);
+                setBorder(new EmptyBorder(0, SPACE_SM, 0, SPACE_SM));
+                return c;
+            }
+        });
 
-        // Zebra striping
         table.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
                     boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
-                    c.setBackground(row % 2 == 0 ? BG_CARD : mezclarConBlanco(BG_APP, 0.4f));
+                    c.setBackground(row % 2 == 0 ? BG_CARD : BG_APP);
                 }
                 setBorder(new EmptyBorder(0, SPACE_SM, 0, SPACE_SM));
                 return c;

@@ -170,52 +170,74 @@ public class FrmLogin extends JFrame {
         });
 
         btnIngresar.addActionListener(e -> {
+            String user = txtUsuario.getText().trim();
+            String pass = new String(txtPassword.getPassword()).trim();
+
+            // Validar campos vacíos antes de tocar la BD
+            if (user.isEmpty() || pass.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "Ingrese su usuario y contraseña.",
+                    "Campos requeridos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             btnIngresar.setEnabled(false);
             btnIngresar.setText("Ingresando...");
 
             SwingUtilities.invokeLater(() -> {
-                String user = txtUsuario.getText();
-                String pass = new String(txtPassword.getPassword());
+                try {
+                    UsuarioDAO dao = new UsuarioDAO();
+                    Usuario u = dao.login(user, pass);
 
-                UsuarioDAO dao = new UsuarioDAO();
-                Usuario u = dao.login(user, pass);
+                    if (u != null) {
+                        Clases.Sesion.setRol(u.getRol());
+                        Clases.Sesion.setUsuario(u.getUsuario());
+                        Clases.Sesion.setIdUsuario(u.getIdUsuario());
 
-                if (u != null) {
-                    Clases.Sesion.setRol(u.getRol());
-                    Clases.Sesion.setUsuario(u.getUsuario());
-                    Clases.Sesion.setIdUsuario(u.getIdUsuario());
+                        // Obtener idEmpleado desde la BD
+                        try (Connection con = Conexion.Conexion.getConexion();
+                             PreparedStatement ps = con.prepareStatement(
+                                 "SELECT idEmpleado FROM usuario WHERE idUsuario=?")) {
+                            ps.setInt(1, u.getIdUsuario());
+                            ResultSet rs = ps.executeQuery();
+                            if (rs.next()) Clases.Sesion.setIdEmpleado(rs.getInt("idEmpleado"));
+                        } catch (Exception ex) { ex.printStackTrace(); }
 
-                    // Obtener idEmpleado desde la BD
-                    try (Connection con = Conexion.Conexion.getConexion();
-                         PreparedStatement ps = con.prepareStatement(
-                             "SELECT idEmpleado FROM usuario WHERE idUsuario=?")) {
-                        ps.setInt(1, u.getIdUsuario());
-                        ResultSet rs = ps.executeQuery();
-                        if (rs.next()) Clases.Sesion.setIdEmpleado(rs.getInt("idEmpleado"));
-                    } catch (Exception ex) { ex.printStackTrace(); }
+                        BitacoraDAO.registrar(u.getIdUsuario(), "LOGIN", "SISTEMA",
+                                "Usuario " + u.getUsuario() + " inició sesión - Rol: " + u.getRol());
 
-                    BitacoraDAO.registrar(u.getIdUsuario(), "LOGIN", "SISTEMA",
-                            "Usuario " + u.getUsuario() + " inició sesión - Rol: " + u.getRol());
+                        JOptionPane.showMessageDialog(this, "Bienvenido " + u.getNombre() + " - " + u.getRol());
 
-                    JOptionPane.showMessageDialog(this, "Bienvenido " + u.getNombre() + " - " + u.getRol());
+                        // Si es Vendedor, mostrar diálogo de asistencia y apertura de caja
+                        if (u.getRol().equalsIgnoreCase("Vendedor")) {
+                            mostrarDialogoAsistencia(u.getNombre());
+                            mostrarDialogoAperturaCaja(u.getNombre());
+                        }
 
-                    // Si es Vendedor, mostrar diálogo de asistencia y apertura de caja
-                    if (u.getRol().equalsIgnoreCase("Vendedor")) {
-                        mostrarDialogoAsistencia(u.getNombre());
-                        mostrarDialogoAperturaCaja(u.getNombre());
-                    }
-                    
+                        new FrmDashboard().setVisible(true);
+                        this.dispose();
 
-                    new FrmDashboard().setVisible(true);
-                    this.dispose();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos",
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                            "Usuario o contraseña incorrectos.",
                             "Error de acceso", JOptionPane.ERROR_MESSAGE);
+                        btnIngresar.setEnabled(true);
+                        btnIngresar.setText("Ingresar");
+                    }
+
+                } catch (UsuarioDAO.CuentaBloqueadaException bloqueada) {
+                    // Cuenta bloqueada por intentos fallidos — mismo comportamiento que minimarket
+                    JOptionPane.showMessageDialog(this,
+                        "Cuenta bloqueada temporalmente.\n"
+                        + "Demasiados intentos fallidos. Intente en "
+                        + bloqueada.getMinutosRestantes() + " minuto(s).",
+                        "Cuenta Bloqueada", JOptionPane.ERROR_MESSAGE);
                     btnIngresar.setEnabled(true);
                     btnIngresar.setText("Ingresar");
                 }
             });
         });
+
 
         btnSalir.addActionListener(e -> System.exit(0));
 
@@ -427,6 +449,8 @@ public class FrmLogin extends JFrame {
         dlg.setVisible(true);
     }
     public static void main(String[] args) {
+        com.formdev.flatlaf.FlatLaf.setGlobalExtraDefaults(
+            java.util.Map.of("@accentColor", "#6366F1"));
         FlatLightLaf.setup();
 
         UIManager.put("Button.arc", 8);

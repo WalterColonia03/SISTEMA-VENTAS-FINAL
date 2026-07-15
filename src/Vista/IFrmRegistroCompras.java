@@ -5,11 +5,14 @@ import Clases.Producto;
 import Conexion.Conexion;
 import DAO.CategoriaDAO;
 import DAO.CompraDAO;
+import DAO.CotizacionProveedorDAO;
 import DAO.CuentasCobrarPagarDAO;
 import DAO.KardexDAO;
 import DAO.ProductoDAO;
 import DAO.ProveedorDAO;
 import DAO.ProveedorDAO.Proveedor;
+import Servicio.CompraService;
+import Servicio.CompraService.ItemCompra;
 import Vista.Estilos.UIKit;
 import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Document;
@@ -64,6 +67,13 @@ public class IFrmRegistroCompras extends JInternalFrame {
     private JButton btnRefrescarHistorial;
     private JTextField txtBuscarHistorial;
     private JButton btnBuscarHistorial;
+
+    // ── PESTAÑA 3: Comparativo de Precios (GAP 4) ──
+    private JTable tblComparativo;
+    private DefaultTableModel modelComparativo;
+    private JButton btnComparar;
+    private JButton btnRefrescarComparativo;
+    private JLabel lblProductoComparativo;
 
     private List<Proveedor> listaProveedores;
 
@@ -131,6 +141,37 @@ public class IFrmRegistroCompras extends JInternalFrame {
         txtBuscarHistorial.putClientProperty("JTextField.placeholderText", "Buscar proveedor...");
         btnBuscarHistorial = UIKit.secondaryButton("Buscar");
 
+        // ── Comparativo de precios (GAP 4) ──
+        String[] colsComp = {"Proveedor", "Precio Unitario", "Última Cotización", "Indicador"};
+        modelComparativo = new DefaultTableModel(colsComp, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        tblComparativo = UIKit.styledTable(modelComparativo);
+        // Colorear columna Indicador (col 3)
+        tblComparativo.getColumnModel().getColumn(3).setCellRenderer(
+            new javax.swing.table.DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                        boolean isSelected, boolean hasFocus, int row, int col) {
+                    Component c = super.getTableCellRendererComponent(
+                            table, value, isSelected, hasFocus, row, col);
+                    if (!isSelected && value != null) {
+                        if (value.toString().contains("MEJOR")) {
+                            c.setForeground(UIKit.SUCCESS);
+                            ((javax.swing.JLabel) c).setFont(UIKit.BODY_BOLD);
+                        } else {
+                            c.setForeground(UIKit.TEXT_SECONDARY);
+                            ((javax.swing.JLabel) c).setFont(UIKit.BODY);
+                        }
+                    }
+                    return c;
+                }
+            });
+        btnComparar            = UIKit.primaryButton("Ver Comparativo del Producto");
+        btnRefrescarComparativo = UIKit.secondaryButton("Mostrar Todos");
+        lblProductoComparativo = new JLabel("Seleccione un producto y pulse 'Ver Comparativo'");
+        lblProductoComparativo.setFont(UIKit.BODY); lblProductoComparativo.setForeground(UIKit.TEXT_SECONDARY);
+
         tblHistorial.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
@@ -186,8 +227,10 @@ public class IFrmRegistroCompras extends JInternalFrame {
         tabs.setFont(UIKit.BODY);
         tabs.addTab("Nueva Compra", buildTabNuevaCompra());
         tabs.addTab("Historial de Compras", buildTabHistorial());
+        tabs.addTab("Comparativo de Precios", buildTabComparativo());
         tabs.addChangeListener(e -> {
             if (tabs.getSelectedIndex() == 1) cargarHistorial("");
+            if (tabs.getSelectedIndex() == 2) cargarComparativoTodos();
         });
 
         getContentPane().add(tabs, BorderLayout.CENTER);
@@ -425,6 +468,9 @@ public class IFrmRegistroCompras extends JInternalFrame {
         btnRefrescarHistorial.addActionListener(e -> cargarHistorial(""));
         btnBuscarHistorial.addActionListener(e -> cargarHistorial(txtBuscarHistorial.getText().trim()));
         btnVerComprobante.addActionListener(e -> generarComprobantePDF());
+        // GAP 4 — Comparativo de precios
+        btnComparar.addActionListener(e -> compararPreciosProductoActual());
+        btnRefrescarComparativo.addActionListener(e -> cargarComparativoTodos());
     }
 
     private void generarComprobantePDF() {
@@ -836,6 +882,7 @@ public class IFrmRegistroCompras extends JInternalFrame {
             JOptionPane.showMessageDialog(this, "Agregue al menos un producto"); return;
         }
 
+        // Calcular totales para el diálogo de confirmación
         double subtotal = 0;
         for (int i = 0; i < modelDetalle.getRowCount(); i++)
             subtotal += Double.parseDouble(modelDetalle.getValueAt(i, 4).toString().replace(",", "."));
@@ -855,80 +902,55 @@ public class IFrmRegistroCompras extends JInternalFrame {
 
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        int idProveedor = listaProveedores.get(cbProveedor.getSelectedIndex() - 1).idProveedor;
-        int idUsuario   = 1;
-
-        CompraDAO compraDAO = new CompraDAO();
-        int idCompra = compraDAO.insertar(idProveedor, idUsuario,
-                txtDocumento.getText().trim(), subtotal, igv, total);
-
-        if (idCompra == -1) { JOptionPane.showMessageDialog(this, "Error al registrar"); return; }
-
-        try (Connection con = Conexion.getConexion();
-             PreparedStatement ps = con.prepareStatement(
-                "UPDATE Compra SET condicionPago=?, estadoPago=? WHERE idCompra=?")) {
-            ps.setString(1, condicion);
-            ps.setString(2, condicion.equals("Contado") ? "Pagado" : "Pendiente");
-            ps.setInt(3, idCompra);
-            ps.executeUpdate();
-        } catch (SQLException ex) { ex.printStackTrace(); }
-
-        ProductoDAO productoDAO = new ProductoDAO();
-        KardexDAO kardexDAO     = new KardexDAO();
-
+        // Construir lista de ítems desde el modelDetalle
+        java.util.List<ItemCompra> items = new java.util.ArrayList<>();
         for (int i = 0; i < modelDetalle.getRowCount(); i++) {
-            int idProducto = Integer.parseInt(modelDetalle.getValueAt(i, 0).toString());
-            int cantidad   = Integer.parseInt(modelDetalle.getValueAt(i, 2).toString());
-            double precio  = Double.parseDouble(modelDetalle.getValueAt(i, 3).toString().replace(",", "."));
-            double sub     = Double.parseDouble(modelDetalle.getValueAt(i, 4).toString().replace(",", "."));
-            String lote    = modelDetalle.getValueAt(i, 5).toString();
-            String venc    = modelDetalle.getValueAt(i, 6).toString();
+            int    idProducto = Integer.parseInt(modelDetalle.getValueAt(i, 0).toString());
+            String nombre     = modelDetalle.getValueAt(i, 1).toString();
+            int    cantidad   = Integer.parseInt(modelDetalle.getValueAt(i, 2).toString());
+            double precio     = Double.parseDouble(modelDetalle.getValueAt(i, 3).toString().replace(",", "."));
+            String lote       = modelDetalle.getValueAt(i, 5).toString();
+            String venc       = modelDetalle.getValueAt(i, 6).toString();
+            items.add(new ItemCompra(idProducto, nombre, cantidad, precio, lote, venc));
+        }
 
-            compraDAO.insertarDetalle(idCompra, idProducto, cantidad, precio, lote, venc, sub);
+        // Obtener datos del proveedor seleccionado
+        int    idProveedor = listaProveedores.get(cbProveedor.getSelectedIndex() - 1).idProveedor;
+        String nombreProv  = listaProveedores.get(cbProveedor.getSelectedIndex() - 1).razonSocial;
 
-            Producto p = productoDAO.listar().stream()
-                    .filter(prod -> prod.getIdProducto() == idProducto).findFirst().orElse(null);
-            if (p != null) {
-                int stockAnterior = p.getCantidad();
-                int stockNuevo    = stockAnterior + cantidad;
-                productoDAO.actualizarStock(idProducto, stockNuevo);
-                kardexDAO.registrar(idProducto, "ENTRADA", cantidad,
-                        stockAnterior, stockNuevo, "COMPRA #" + idCompra, idUsuario);
+        // Delegar al servicio (mismo patrón que CompraService.registrarCompra)
+        CompraService service = new CompraService();
+        try {
+            int idCompra = service.registrarCompra(idProveedor,
+                    txtDocumento.getText().trim(), condicion, nombreProv, items);
+
+            // GAP 4 — Guardar cotizaciones de proveedor automáticamente al registrar compra
+            CotizacionProveedorDAO cotDAO = new CotizacionProveedorDAO();
+            for (ItemCompra item : items) {
+                cotDAO.registrar(item.idProducto, idProveedor, item.precioUnitario);
             }
-        }
 
-        if (!condicion.equals("Contado")) {
-            int dias     = condicion.contains("30") ? 30 : condicion.contains("60") ? 60 : 90;
-            String fVenc = LocalDate.now().plusDays(dias).toString();
-            String prov  = cbProveedor.getSelectedItem().toString();
-            new CuentasCobrarPagarDAO().registrarPagar(prov, txtDocumento.getText().trim(),
-                total, LocalDate.now().toString(), fVenc, condicion, idCompra, 1);
-            
-            // Asiento contable automático (crédito)
-            new DAO.LibroMayorDAO().registrarAsientoCompraCredito(
-                idCompra, txtDocumento.getText().trim(), total, subtotal, igv, idUsuario);
-            
-            JOptionPane.showMessageDialog(this,
-                "Compra #" + idCompra + " registrada\n" +
-                "Total: S/ " + String.format("%.2f", total) + "\n\n" +
-                "Deuda en Cuentas por Pagar\nVence: " + fVenc + " (" + condicion + ")",
-                "Compra al Crédito", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            // Registrar EGRESO en Flujo de Caja (solo contado)
-            new DAO.FlujoCajaDAO().registrar("EGRESO",
-                "Compra #" + idCompra + " - " + txtDocumento.getText().trim(),
-                total, idUsuario, "COMPRA #" + idCompra);
-            
-            // Asiento contable automático
-            new DAO.LibroMayorDAO().registrarAsientoCompraContado(
-                idCompra, txtDocumento.getText().trim(), total, subtotal, igv, idUsuario);
+            if (!condicion.equals("Contado")) {
+                int dias  = condicion.contains("30") ? 30 : condicion.contains("60") ? 60 : 90;
+                String fV = java.time.LocalDate.now().plusDays(dias).toString();
+                JOptionPane.showMessageDialog(this,
+                    "Compra #" + idCompra + " registrada\n" +
+                    "Total: S/ " + String.format("%.2f", total) + "\n\n" +
+                    "Deuda en Cuentas por Pagar\nVence: " + fV + " (" + condicion + ")",
+                    "Compra al Crédito", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Compra #" + idCompra + " registrada\n" +
+                    "Total: S/ " + String.format("%.2f", total) + "\nEstado: Pagado al Contado",
+                    "Compra Exitosa", JOptionPane.INFORMATION_MESSAGE);
+            }
+            limpiarTodo();
 
+        } catch (CompraService.CompraException ex) {
             JOptionPane.showMessageDialog(this,
-                "Compra #" + idCompra + " registrada\n" +
-                "Total: S/ " + String.format("%.2f", total) + "\nEstado: Pagado al Contado",
-                "Compra Exitosa", JOptionPane.INFORMATION_MESSAGE);
+                    ex.getMessage(),
+                    "Error en la Compra", JOptionPane.ERROR_MESSAGE);
         }
-        limpiarTodo();
     }
 
     private void recalcularTotales() {
@@ -959,5 +981,100 @@ public class IFrmRegistroCompras extends JInternalFrame {
         modelDetalle.setRowCount(0);
         recalcularTotales();
         limpiarFormProducto();
+    }
+
+    // ─── PESTAÑA 3: COMPARATIVO DE PRECIOS (GAP 4) ──────────────────────────
+
+    private JPanel buildTabComparativo() {
+        JPanel tab = new JPanel(new BorderLayout(0, UIKit.SPACE_MD));
+        tab.setOpaque(false);
+        tab.setBorder(new EmptyBorder(UIKit.SPACE_MD, 0, 0, 0));
+
+        JPanel pnlCard = UIKit.card();
+        pnlCard.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
+
+        // Header con instrucción
+        JPanel pnlTop = new JPanel(new BorderLayout());
+        pnlTop.setOpaque(false);
+        pnlTop.add(UIKit.sectionHeader("Comparativo de Precios por Proveedor", null), BorderLayout.NORTH);
+
+        JPanel pnlAcciones = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, UIKit.SPACE_SM));
+        pnlAcciones.setOpaque(false);
+        pnlAcciones.add(lblProductoComparativo);
+        pnlAcciones.add(btnComparar);
+        pnlAcciones.add(btnRefrescarComparativo);
+        pnlTop.add(pnlAcciones, BorderLayout.CENTER);
+
+        // Nota informativa
+        JLabel lblNota = new JLabel(
+            "  ★ El precio más bajo aparece en verde. Busca un producto en la pestaña 'Nueva Compra' y luego pulsa 'Ver Comparativo'.");
+        lblNota.setFont(UIKit.CAPTION);
+        lblNota.setForeground(UIKit.TEXT_SECONDARY);
+        pnlTop.add(lblNota, BorderLayout.SOUTH);
+
+        pnlCard.add(pnlTop, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(tblComparativo);
+        scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
+        pnlCard.add(scroll, BorderLayout.CENTER);
+
+        tab.add(pnlCard, BorderLayout.CENTER);
+        return tab;
+    }
+
+    /** Compara precios del producto actualmente buscado en la pestaña 1. */
+    private void compararPreciosProductoActual() {
+        String codStr = txtCodProducto.getText().trim();
+        if (codStr.isEmpty() || txtProductoNombre.getText().isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Primero busque un producto en la pestaña 'Nueva Compra'.",
+                "Producto no seleccionado", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            int idProducto = Integer.parseInt(codStr);
+            String nombreProd = txtProductoNombre.getText();
+            lblProductoComparativo.setText("Producto: " + nombreProd + " (ID #" + idProducto + ")");
+            lblProductoComparativo.setForeground(UIKit.PRIMARY);
+
+            modelComparativo.setRowCount(0);
+            CotizacionProveedorDAO dao = new CotizacionProveedorDAO();
+            java.util.List<Object[]> lista = dao.compararPorProducto(idProducto);
+
+            if (lista.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "No hay cotizaciones registradas para " + nombreProd + ".\n" +
+                    "Las cotizaciones se guardan automáticamente al registrar compras.",
+                    "Sin datos", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            double precioMin = (double) lista.get(0)[1]; // ya ordenado ASC
+            for (int i = 0; i < lista.size(); i++) {
+                Object[] row = lista.get(i);
+                double precio = (double) row[1];
+                String indicador = (precio == precioMin) ? "✔ MEJOR PRECIO" : "";
+                modelComparativo.addRow(new Object[]{
+                    row[0],                                    // proveedor
+                    String.format("S/ %.2f", precio),          // precio
+                    row[2],                                    // fecha
+                    indicador
+                });
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "ID de producto inválido.");
+        }
+    }
+
+    /** Muestra todas las cotizaciones vigentes de todos los productos. */
+    private void cargarComparativoTodos() {
+        modelComparativo.setRowCount(0);
+        lblProductoComparativo.setText("Mostrando todas las cotizaciones vigentes");
+        lblProductoComparativo.setForeground(UIKit.TEXT_SECONDARY);
+        CotizacionProveedorDAO dao = new CotizacionProveedorDAO();
+        // listarTodas devuelve: producto, proveedor, precio (formateado), fecha
+        for (Object[] row : dao.listarTodas()) {
+            modelComparativo.addRow(new Object[]{ row[1], row[2], row[3], "" });
+        }
     }
 }

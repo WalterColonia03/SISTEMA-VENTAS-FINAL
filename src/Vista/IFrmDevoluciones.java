@@ -467,6 +467,10 @@ public class IFrmDevoluciones extends JInternalFrame {
                         .findFirst().orElse(null);
                 if (p != null) prodDAO.actualizarStock(idProducto, p.getCantidad() + cant);
 
+                // GAP 1 — Asiento contable de devolución (plan-gaps-erp.md §1b)
+                new DAO.LibroMayorDAO().registrarAsientoDevolucion(
+                    idVentaActual, monto, Clases.Sesion.getIdUsuario() > 0 ? Clases.Sesion.getIdUsuario() : 1);
+
                 JOptionPane.showMessageDialog(this,
                     "Devolución registrada correctamente\n" +
                     "Monto a reembolsar: S/ " + String.format("%.2f", monto),
