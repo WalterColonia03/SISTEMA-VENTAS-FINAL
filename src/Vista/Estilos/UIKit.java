@@ -12,20 +12,21 @@ public final class UIKit {
     private UIKit() {}
 
     // ===================== PALETA (alineada a minimarket) =====================
-    public static final Color PRIMARY        = new Color(0x111827); // gray-900
+    public static final Color PRIMARY        = new Color(0x111827); // gray-900 (antes 0x1B3B6F)
     public static final Color PRIMARY_DARK    = new Color(0x0B0F19);
-    public static final Color ACCENT          = new Color(0x6366F1); // indigo-500
-    public static final Color ACCENT_HOVER    = new Color(0x4F46E5); // indigo-600
-    public static final Color BG_APP          = new Color(0xF9FAFB); // gray-50
+    public static final Color ACCENT          = new Color(0x6366F1); // indigo-500 (antes 0x2D6CDF)
+    public static final Color ACCENT_HOVER    = new Color(0x4F46E5); // indigo-600 (antes 0x1E54B7)
+    public static final Color BG_APP          = new Color(0xF9FAFB); // gray-50 (antes 0xF5F6F8)
     public static final Color BG_CARD         = Color.WHITE;
-    public static final Color BORDER          = new Color(0xE5E7EB); // gray-200
-    public static final Color TEXT_PRIMARY    = new Color(0x1F2937); // gray-800
-    public static final Color TEXT_SECONDARY  = new Color(0x6B7280); // gray-500
-    public static final Color SUCCESS         = new Color(0x16A34A); // green-600
-    public static final Color WARNING         = new Color(0xD97706); // amber-600
-    public static final Color DANGER          = new Color(0xDC2626); // red-600
+    public static final Color BORDER          = new Color(0xE5E7EB); // gray-200 (antes 0xE1E4E8)
+    public static final Color TEXT_PRIMARY    = new Color(0x1F2937); // gray-800 (antes 0x1F2733)
+    public static final Color TEXT_SECONDARY  = new Color(0x6B7280); // gray-500 (antes 0x5B6472)
+    public static final Color SUCCESS         = new Color(0x16A34A); // green-600 (antes 0x1E8E5A)
+    public static final Color WARNING         = new Color(0xD97706); // amber-600 (antes 0xF2994A)
+    public static final Color DANGER          = new Color(0xDC2626); // red-600 (antes 0xD64550)
     public static final Color INFO            = ACCENT;
 
+    // Nuevos: específicos del sidebar oscuro estilo minimarket
     public static final Color SIDEBAR_BG            = new Color(0x111827); // gray-900
     public static final Color SIDEBAR_HOVER         = new Color(0x1F2937); // gray-800
     public static final Color SIDEBAR_TEXT_INACTIVE = new Color(0x9CA3AF); // gray-400
@@ -92,18 +93,22 @@ public final class UIKit {
         return b;
     }
 
-    // ===================== BOTÓN DE SOLO ÍCONO =====================
+    // ===================== NUEVO: BOTÓN DE SOLO ÍCONO =====================
+    /** Botón pequeño solo-ícono para filas de tabla (editar/eliminar), con fondo transparente
+     *  y un tinte de color al pasar el mouse. Sustituye a los JButton de texto "Editar"/"Eliminar". */
     public static JButton iconButton(Icon icon, Color tint, Color hoverBg, String tooltip) {
         JButton b = new JButton(icon);
         b.setToolTipText(tooltip);
         b.setForeground(tint);
         b.setBorderPainted(false);
         b.setFocusPainted(false);
-        b.setContentAreaFilled(true);
+        b.setOpaque(false);
+        b.setContentAreaFilled(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         b.setMargin(new Insets(6, 6, 6, 6));
         b.putClientProperty(FlatClientProperties.STYLE,
                 "arc: 8; background: " + hex(BG_CARD) + "; hoverBackground: " + hex(hoverBg) + ";");
+        b.setContentAreaFilled(true);
         return b;
     }
 
@@ -115,7 +120,9 @@ public final class UIKit {
         return iconButton(icon, DANGER, mezclarConBlanco(DANGER, 0.9f), "Eliminar");
     }
 
-    // ===================== CAMPO DE BÚSQUEDA =====================
+    // ===================== NUEVO: CAMPO DE BÚSQUEDA =====================
+    /** JTextField con ícono incrustado a la izquierda (usa el mecanismo nativo de FlatLaf,
+     *  no requiere JLayeredPane). Pásale el mismo tipo de Icon que ya uses en el resto del ERP. */
     public static JTextField searchField(String placeholder, Icon searchIcon) {
         JTextField tf = textField();
         tf.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, placeholder);
@@ -225,7 +232,11 @@ public final class UIKit {
         return card;
     }
 
-    // ===================== BADGES (pintado manual con Graphics2D — no usa arc en JLabel) =====================
+    // ===================== BADGE DE ESTADO =====================
+    // OJO: la propiedad de estilo "arc" de FlatLaf NO existe para JLabel (solo para
+    // Button/TextField/Panel/etc). Usarla en un JLabel no rompe el build, pero SÍ lanza
+    // una FlatStylingSupport.UnknownStyleException en tiempo de ejecución (silenciosa,
+    // solo queda logueada) y el redondeo nunca se aplica. Por eso el pill se pinta a mano.
     private static JLabel pill(String texto, Color bg, Color fg) {
         JLabel badge = new JLabel(texto) {
             @Override
@@ -247,17 +258,21 @@ public final class UIKit {
         return badge;
     }
 
-    /** Badge suave: fondo tenue + texto de color. Para estados dentro de tablas. */
+    /** Badge "suave": fondo tenue (color mezclado con blanco) + texto del color base. Para
+     *  estados dentro de una tabla (Activo/Inactivo, Pagado/Pendiente, etc.). */
     public static JLabel statusBadge(String texto, Color color) {
         return pill(texto, mezclarConBlanco(color, 0.85f), color);
     }
 
-    /** Badge sólido: fondo pleno + texto blanco, como el badge de rol de minimarket. */
+    /** Badge "sólido": fondo de color pleno + texto blanco, como el badge de rol de
+     *  minimarket. Úsalo para el badge de usuario/rol en el header. */
     public static JLabel statusBadgeSolid(String texto, Color bg) {
         return pill(texto, bg, Color.WHITE);
     }
 
-    // ===================== TABLAS (cabecera indigo sólida, cebra) =====================
+    // ===================== TABLAS =====================
+    /** Cabecera sólida (ACCENT + texto blanco) en vez de la sutil anterior (BG_APP + texto gris),
+     *  para igualar el patrón de tabla de minimarket. El resto (zebra striping, sin grid) no cambia. */
     public static JTable styledTable(DefaultTableModel model) {
         JTable table = new JTable(model);
         table.setFont(BODY);
@@ -269,6 +284,9 @@ public final class UIKit {
         table.setFillsViewportHeight(true);
 
         JTableHeader header = table.getTableHeader();
+        header.setFont(BODY_BOLD);
+        header.setBackground(ACCENT);
+        header.setForeground(Color.WHITE);
         header.setPreferredSize(new Dimension(0, 40));
         header.setReorderingAllowed(false);
         header.setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
