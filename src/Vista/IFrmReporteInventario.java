@@ -43,7 +43,7 @@ public class IFrmReporteInventario extends JInternalFrame {
 
         lblTotalProductos = new JLabel("0");
         lblTotalProductos.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTotalProductos.setForeground(UIKit.PRIMARY);
+        lblTotalProductos.setForeground(UIKit.ACCENT);
 
         lblTotalStock = new JLabel("0");
         lblTotalStock.setFont(new Font("Segoe UI", Font.BOLD, 22));

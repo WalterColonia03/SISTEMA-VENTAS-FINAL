@@ -34,11 +34,7 @@ public class IFrmCuentasCobrarPagar extends JInternalFrame {
         lblTotalPagar.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTotalPagar.setForeground(UIKit.DANGER);
 
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(200, 36));
-        txtBuscar.putClientProperty("JTextField.placeholderText", "Buscar proveedor...");
-
-        btnBuscar       = UIKit.secondaryButton("Buscar");
+        txtBuscar = UIKit.searchField("Buscar proveedor...", null);
         btnRefrescar    = UIKit.secondaryButton("Refrescar");
         btnMarcarPagado = UIKit.primaryButton("Marcar como Pagado");
 
@@ -137,7 +133,6 @@ public class IFrmCuentasCobrarPagar extends JInternalFrame {
         JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
         pnlBusqueda.setOpaque(false);
         pnlBusqueda.add(txtBuscar);
-        pnlBusqueda.add(btnBuscar);
         pnlBusqueda.add(btnRefrescar);
 
         JPanel pnlBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, UIKit.SPACE_SM, 0));
@@ -161,12 +156,15 @@ public class IFrmCuentasCobrarPagar extends JInternalFrame {
     }
 
     private void attachEvents() {
-        btnBuscar.addActionListener(e -> {
-            String texto = txtBuscar.getText().trim().toLowerCase();
-            modelPagar.setRowCount(0);
-            for (Object[] row : new CuentasCobrarPagarDAO().listarPagar()) {
-                if (row[1].toString().toLowerCase().contains(texto))
-                    modelPagar.addRow(row);
+        // Live search por proveedor
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                String texto = txtBuscar.getText().trim().toLowerCase();
+                modelPagar.setRowCount(0);
+                for (Object[] row : new CuentasCobrarPagarDAO().listarPagar()) {
+                    if (row[1].toString().toLowerCase().contains(texto))
+                        modelPagar.addRow(row);
+                }
             }
         });
 

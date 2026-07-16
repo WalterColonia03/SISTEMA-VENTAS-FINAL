@@ -41,7 +41,7 @@ public class IFrmKardex extends JInternalFrame {
 
         lblStockActual = new JLabel("0");
         lblStockActual.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        lblStockActual.setForeground(UIKit.PRIMARY);
+        lblStockActual.setForeground(UIKit.ACCENT);
 
         lblEntradas = new JLabel("0");
         lblEntradas.setFont(new Font("Segoe UI", Font.BOLD, 20));

@@ -14,7 +14,6 @@ public class IFrmFidelizacion extends JInternalFrame {
     private JTable tblClientesPuntos;
     private DefaultTableModel modelClientesPuntos;
     private JTextField txtBuscar;
-    private JButton btnBuscar;
 
     private JTextField txtIdCliente;
     private JTextField txtNombreCliente;
@@ -39,9 +38,7 @@ public class IFrmFidelizacion extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(200, 36));
-        btnBuscar = UIKit.secondaryButton("Buscar");
+        txtBuscar = UIKit.searchField("Buscar cliente por nombre o DNI...", null);
 
         String[] columns = {"ID", "Nombre", "Apellido", "DNI/RUC", "Puntos", "Canjeados", "S/ por Punto"};
         modelClientesPuntos = new DefaultTableModel(columns, 0) {
@@ -99,7 +96,6 @@ public class IFrmFidelizacion extends JInternalFrame {
         JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
         pnlBusqueda.setOpaque(false);
         pnlBusqueda.add(txtBuscar);
-        pnlBusqueda.add(btnBuscar);
 
         JPanel pnlHeader = new JPanel(new BorderLayout());
         pnlHeader.setOpaque(false);
@@ -197,16 +193,17 @@ public class IFrmFidelizacion extends JInternalFrame {
 
     private void attachEvents() {
 
-        // BUSCAR
-        btnBuscar.addActionListener(e -> {
-            String texto = txtBuscar.getText().trim().toLowerCase();
-            modelClientesPuntos.setRowCount(0);
-            FidelizacionDAO dao = new FidelizacionDAO();
-            for (Object[] row : dao.listarClientes()) {
-                String nombre = row[1].toString() + " " + row[2].toString();
-                if (nombre.toLowerCase().contains(texto) ||
-                        row[3].toString().contains(texto)) {
-                    modelClientesPuntos.addRow(row);
+        // Búsqueda live por nombre/DNI
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                String texto = txtBuscar.getText().trim().toLowerCase();
+                modelClientesPuntos.setRowCount(0);
+                for (Object[] row : new FidelizacionDAO().listarClientes()) {
+                    String nombre = row[1].toString() + " " + row[2].toString();
+                    if (nombre.toLowerCase().contains(texto) ||
+                            row[3].toString().contains(texto)) {
+                        modelClientesPuntos.addRow(row);
+                    }
                 }
             }
         });

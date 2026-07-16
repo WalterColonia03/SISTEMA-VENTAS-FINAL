@@ -68,7 +68,7 @@ public class IFrmReporteVentas extends JInternalFrame {
 
         lblTotalTransacciones = new JLabel("0");
         lblTotalTransacciones.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTotalTransacciones.setForeground(UIKit.PRIMARY);
+        lblTotalTransacciones.setForeground(UIKit.ACCENT);
 
         lblPromedioVenta = new JLabel("S/ 0.00");
         lblPromedioVenta.setFont(new Font("Segoe UI", Font.BOLD, 20));

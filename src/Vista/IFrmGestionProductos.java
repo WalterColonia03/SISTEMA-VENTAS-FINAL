@@ -27,7 +27,8 @@ public class IFrmGestionProductos extends JInternalFrame {
     private JTextField txtPrecio;
     private JComboBox<String> cbCategoria;
 
-    private JButton btnBuscar;
+    private JLabel lblEmptyState;
+    private JButton btnNuevo;
     private JButton btnGuardar;
     private JButton btnDesactivar;
     private JButton btnLimpiar;
@@ -44,31 +45,26 @@ public class IFrmGestionProductos extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(200, 36));
-        btnBuscar = UIKit.secondaryButton("Buscar");
+        // Sección 5: searchField con 260px, sin botón separado
+        txtBuscar = UIKit.searchField("Buscar producto...", null);
 
         String[] columns = {"ID", "Nombre", "Cantidad", "Precio (S/)", "Categoría", "Estado"};
         modelProductos = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) {
-                return false;
-            }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         tblProductos = UIKit.styledTable(modelProductos);
 
-        txtId = UIKit.readOnlyField();
-        txtId.setEditable(false);
-        txtId.setFocusable(false);
+        lblEmptyState = new JLabel("No hay productos registrados", SwingConstants.CENTER);
+        lblEmptyState.setFont(UIKit.BODY);
+        lblEmptyState.setForeground(UIKit.TEXT_SECONDARY);
+        lblEmptyState.setVisible(false);
 
+        txtId = UIKit.readOnlyField(); txtId.setEditable(false); txtId.setFocusable(false);
         txtNombre = UIKit.textField();
         txtDescripcion = UIKit.textField();
-
-        txtCantidad = UIKit.textField();
-        txtCantidad.setHorizontalAlignment(JTextField.RIGHT);
-
-        txtPrecio = UIKit.textField();
-        txtPrecio.setHorizontalAlignment(JTextField.RIGHT);
+        txtCantidad = UIKit.textField(); txtCantidad.setHorizontalAlignment(JTextField.RIGHT);
+        txtPrecio   = UIKit.textField(); txtPrecio.setHorizontalAlignment(JTextField.RIGHT);
 
         cbCategoria = new JComboBox<>();
         cbCategoria.setFont(UIKit.BODY);
@@ -78,8 +74,9 @@ public class IFrmGestionProductos extends JInternalFrame {
         cbFiltroCategoria.setFont(UIKit.BODY);
         cbFiltroCategoria.setPreferredSize(new Dimension(180, 36));
 
-        btnGuardar = UIKit.primaryButton("Guardar / Actualizar");
-        btnLimpiar = UIKit.secondaryButton("Limpiar / Nuevo");
+        btnNuevo      = UIKit.primaryButton("+ Nuevo Producto");
+        btnGuardar    = UIKit.primaryButton("Guardar / Actualizar");
+        btnLimpiar    = UIKit.secondaryButton("Limpiar / Nuevo");
         btnDesactivar = UIKit.secondaryButton("Desactivar / Activar");
 
         cargarCategorias();
@@ -104,33 +101,34 @@ public class IFrmGestionProductos extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        getContentPane().add(
-                UIKit.screenHeader("Gestión de Productos", "Inventario  ›  Productos"),
-                BorderLayout.NORTH);
+        // Sección 5: título + botón primario en BorderLayout
+        JPanel pnlTop = new JPanel(new BorderLayout());
+        pnlTop.setOpaque(false);
+        pnlTop.add(UIKit.screenHeader("Gestión de Productos", "Inventario  ›  Productos"), BorderLayout.WEST);
+        pnlTop.add(btnNuevo, BorderLayout.EAST);
+        getContentPane().add(pnlTop, BorderLayout.NORTH);
 
         JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
         cuerpo.setOpaque(false);
 
-        // Tabla
         JPanel pnlTabla = UIKit.card();
         pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
 
+        // searchField + cbFiltroCategoria, ambos angostos (sin botón)
         JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
         pnlBusqueda.setOpaque(false);
         pnlBusqueda.add(txtBuscar);
         pnlBusqueda.add(cbFiltroCategoria);
-        pnlBusqueda.add(btnBuscar);
 
-        JPanel pnlHeader = new JPanel(new BorderLayout());
-        pnlHeader.setOpaque(false);
-        pnlHeader.add(UIKit.sectionHeader("Listado de Productos", null), BorderLayout.NORTH);
-        pnlHeader.add(pnlBusqueda, BorderLayout.CENTER);
+        pnlTabla.add(UIKit.sectionHeader("Listado de Productos", null), BorderLayout.NORTH);
+        pnlTabla.add(pnlBusqueda, BorderLayout.BEFORE_FIRST_LINE);
 
-        pnlTabla.add(pnlHeader, BorderLayout.NORTH);
-
+        JPanel pnlWrapper = new JPanel(new BorderLayout()); pnlWrapper.setOpaque(false);
         JScrollPane scroll = new JScrollPane(tblProductos);
         scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnlTabla.add(scroll, BorderLayout.CENTER);
+        pnlWrapper.add(scroll, BorderLayout.CENTER);
+        pnlWrapper.add(lblEmptyState, BorderLayout.SOUTH);
+        pnlTabla.add(pnlWrapper, BorderLayout.CENTER);
         cuerpo.add(pnlTabla, BorderLayout.CENTER);
 
         // Formulario
@@ -216,25 +214,15 @@ public class IFrmGestionProductos extends JInternalFrame {
 
     private void attachEvents() {
 
-        // BUSCAR
-        btnBuscar.addActionListener(e -> {
-            String texto = txtBuscar.getText().trim().toLowerCase();
-            String filtro = cbFiltroCategoria.getSelectedItem().toString();
-            modelProductos.setRowCount(0);
-            ProductoDAO dao = new ProductoDAO();
-            for (Producto p : dao.listarTodos()) {
-                String cat = obtenerNombreCategoria(p.getIdCategoria());
-                boolean coincideNombre = p.getNombre().toLowerCase().contains(texto);
-                boolean coincideCategoria = filtro.equals("Todas las Categorías") || cat.equals(filtro);
-                if (coincideNombre && coincideCategoria) {
-                    modelProductos.addRow(new Object[]{
-                        p.getIdProducto(), p.getNombre(), p.getCantidad(),
-                        String.format("%.2f", p.getPrecio()), cat,
-                        p.getEstado() == 1 ? "Activo" : "Inactivo"
-                    });
-                }
-            }
-        });
+        // BUSCAR en tiempo real (nombre + filtro de categoría)
+        java.awt.event.KeyAdapter buscarListener = new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) { filtrarTabla(); }
+        };
+        txtBuscar.addKeyListener(buscarListener);
+        cbFiltroCategoria.addActionListener(e -> filtrarTabla());
+
+        // Botón Nuevo
+        btnNuevo.addActionListener(e -> limpiar());
 
         // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
@@ -360,17 +348,35 @@ public class IFrmGestionProductos extends JInternalFrame {
 
     private void cargarTabla() {
         modelProductos.setRowCount(0);
-        ProductoDAO dao = new ProductoDAO();
-        for (Producto p : dao.listarTodos()) {
+        for (Producto p : new ProductoDAO().listarTodos()) {
             modelProductos.addRow(new Object[]{
-                p.getIdProducto(),
-                p.getNombre(),
-                p.getCantidad(),
+                p.getIdProducto(), p.getNombre(), p.getCantidad(),
                 String.format("%.2f", p.getPrecio()),
                 obtenerNombreCategoria(p.getIdCategoria()),
                 p.getEstado() == 1 ? "Activo" : "Inactivo"
             });
         }
+        lblEmptyState.setVisible(modelProductos.getRowCount() == 0);
+    }
+
+    private void filtrarTabla() {
+        String texto  = txtBuscar.getText().trim().toLowerCase();
+        String filtro = cbFiltroCategoria.getSelectedItem() != null
+                        ? cbFiltroCategoria.getSelectedItem().toString() : "Todas las Categorías";
+        modelProductos.setRowCount(0);
+        for (Producto p : new ProductoDAO().listarTodos()) {
+            String cat = obtenerNombreCategoria(p.getIdCategoria());
+            boolean okNombre = p.getNombre().toLowerCase().contains(texto);
+            boolean okCat    = filtro.equals("Todas las Categorías") || cat.equals(filtro);
+            if (okNombre && okCat) {
+                modelProductos.addRow(new Object[]{
+                    p.getIdProducto(), p.getNombre(), p.getCantidad(),
+                    String.format("%.2f", p.getPrecio()), cat,
+                    p.getEstado() == 1 ? "Activo" : "Inactivo"
+                });
+            }
+        }
+        lblEmptyState.setVisible(modelProductos.getRowCount() == 0);
     }
 
     private String obtenerNombreCategoria(int idCategoria) {

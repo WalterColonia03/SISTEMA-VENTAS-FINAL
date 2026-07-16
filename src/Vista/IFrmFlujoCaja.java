@@ -64,7 +64,7 @@ public class IFrmFlujoCaja extends JInternalFrame {
 
         lblSaldoNeto = new JLabel("S/ 0.00");
         lblSaldoNeto.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblSaldoNeto.setForeground(UIKit.PRIMARY);
+        lblSaldoNeto.setForeground(UIKit.ACCENT);
 
         lblTipoCambio = new JLabel("3.72");
         lblTipoCambio.setFont(new Font("Segoe UI", Font.BOLD, 28));

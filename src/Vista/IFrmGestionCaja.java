@@ -101,7 +101,7 @@ public class IFrmGestionCaja extends JInternalFrame {
 
         lblDineroDisponible = new JLabel("S/ 0.00");
         lblDineroDisponible.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblDineroDisponible.setForeground(UIKit.PRIMARY);
+        lblDineroDisponible.setForeground(UIKit.ACCENT);
 
         btnRetiro = UIKit.primaryButton("Registrar Retiro");
         btnRefrescar = UIKit.secondaryButton("Refrescar");

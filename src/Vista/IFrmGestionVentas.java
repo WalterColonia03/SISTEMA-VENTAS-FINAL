@@ -56,9 +56,7 @@ public class IFrmGestionVentas extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(180, 36));
-        txtBuscar.putClientProperty("JTextField.placeholderText", "Buscar cliente...");
+        txtBuscar = UIKit.searchField("Buscar por cliente...", null);
 
         btnBuscar      = UIKit.secondaryButton("Buscar");
         btnRefrescar   = UIKit.secondaryButton("Refrescar");
@@ -113,7 +111,7 @@ public class IFrmGestionVentas extends JInternalFrame {
 
         lblTotalTransacciones = new JLabel("0");
         lblTotalTransacciones.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTotalTransacciones.setForeground(UIKit.PRIMARY);
+        lblTotalTransacciones.setForeground(UIKit.ACCENT);
 
         datasetTopProductos = new DefaultCategoryDataset();
         datasetVentasHora = new DefaultCategoryDataset();
@@ -263,12 +261,29 @@ private void abrirEstadisticas() {
     }
 
     private void attachEvents() {
+        // Búsqueda live
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                cargarTablaFiltrada(
+                    txtBuscar.getText().trim().toLowerCase(),
+                    cbFiltroCliente.getSelectedItem().toString(),
+                    cbFiltroEstado.getSelectedItem().toString());
+            }
+        });
+        cbFiltroCliente.addActionListener(e -> cargarTablaFiltrada(
+            txtBuscar.getText().trim().toLowerCase(),
+            cbFiltroCliente.getSelectedItem().toString(),
+            cbFiltroEstado.getSelectedItem().toString()));
+        cbFiltroEstado.addActionListener(e -> cargarTablaFiltrada(
+            txtBuscar.getText().trim().toLowerCase(),
+            cbFiltroCliente.getSelectedItem().toString(),
+            cbFiltroEstado.getSelectedItem().toString()));
+
         btnBuscar.addActionListener(e -> {
             cargarTablaFiltrada(
                 txtBuscar.getText().trim().toLowerCase(),
                 cbFiltroCliente.getSelectedItem().toString(),
-                cbFiltroEstado.getSelectedItem().toString()
-            );
+                cbFiltroEstado.getSelectedItem().toString());
             cargarGraficas();
         });
 

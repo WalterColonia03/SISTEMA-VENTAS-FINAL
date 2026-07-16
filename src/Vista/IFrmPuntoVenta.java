@@ -61,7 +61,7 @@ public class IFrmPuntoVenta extends JInternalFrame {
 
         lblNombreCliente = new JLabel("Consumidor Final");
         lblNombreCliente.setFont(UIKit.BODY_BOLD);
-        lblNombreCliente.setForeground(UIKit.PRIMARY);
+        lblNombreCliente.setForeground(UIKit.ACCENT);
 
         txtCodProducto = UIKit.textField();
         txtCodProducto.setPreferredSize(new Dimension(180, 36));

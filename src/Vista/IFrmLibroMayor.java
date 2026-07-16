@@ -82,7 +82,7 @@ public class IFrmLibroMayor extends JInternalFrame {
 
         lblSaldoActual = new JLabel("S/ 0.00");
         lblSaldoActual.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblSaldoActual.setForeground(UIKit.PRIMARY);
+        lblSaldoActual.setForeground(UIKit.ACCENT);
     }
 
     private void buildLayout() {

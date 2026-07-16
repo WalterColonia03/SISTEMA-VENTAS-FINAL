@@ -44,7 +44,7 @@ public class IFrmMarcadorAsistencia extends JInternalFrame {
 
         lblHora = new JLabel(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
         lblHora.setFont(new Font("Segoe UI", Font.BOLD, 56));
-        lblHora.setForeground(UIKit.PRIMARY);
+        lblHora.setForeground(UIKit.ACCENT);
         lblHora.setHorizontalAlignment(SwingConstants.CENTER);
 
         lblFecha = new JLabel(LocalDate.now().format(

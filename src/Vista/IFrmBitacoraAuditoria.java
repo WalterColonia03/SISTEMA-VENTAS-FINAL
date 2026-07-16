@@ -41,9 +41,7 @@ public class IFrmBitacoraAuditoria extends JInternalFrame {
         txtFechaFin.setText(LocalDate.now().toString());
         txtFechaFin.setPreferredSize(new Dimension(130, 36));
 
-        txtUsuario = UIKit.textField();
-        txtUsuario.setPreferredSize(new Dimension(130, 36));
-        txtUsuario.putClientProperty("JTextField.placeholderText", "Usuario...");
+        txtUsuario = UIKit.searchField("Usuario...", null);
 
         cbModulo = new JComboBox<>(new String[]{
             "Todos", "LOGIN", "VENTAS", "COMPRAS", "PRODUCTOS",
@@ -123,6 +121,11 @@ public class IFrmBitacoraAuditoria extends JInternalFrame {
     }
 
     private void attachEvents() {
+        // Live search en usuario
+        txtUsuario.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) { cargarBitacora(); }
+        });
+        cbModulo.addActionListener(e -> cargarBitacora());
         btnBuscar.addActionListener(e -> cargarBitacora());
         btnRefrescar.addActionListener(e -> {
             txtFechaInicio.setText(LocalDate.now().withDayOfMonth(1).toString());

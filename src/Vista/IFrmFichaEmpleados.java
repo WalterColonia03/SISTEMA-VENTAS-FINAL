@@ -25,7 +25,8 @@ public class IFrmFichaEmpleados extends JInternalFrame {
     private JComboBox<String> cbCargo;
     private JComboBox<String> cbEstado;
 
-    private JButton btnBuscar;
+    private JLabel lblEmptyState;
+    private JButton btnNuevo;
     private JButton btnGuardar;
     private JButton btnDesactivar;
     private JButton btnLimpiar;
@@ -42,9 +43,7 @@ public class IFrmFichaEmpleados extends JInternalFrame {
     }
 
     private void initComponents() {
-        txtBuscar = UIKit.textField();
-        txtBuscar.setPreferredSize(new Dimension(200, 36));
-        btnBuscar = UIKit.secondaryButton("Buscar");
+        txtBuscar = UIKit.searchField("Buscar empleado por nombre o DNI...", null);
 
         String[] columns = {"ID", "Nombres", "Apellidos", "DNI", "Cargo", "Teléfono", "Estado"};
         modelEmpleados = new DefaultTableModel(columns, 0) {
@@ -52,23 +51,23 @@ public class IFrmFichaEmpleados extends JInternalFrame {
         };
         tblEmpleados = UIKit.styledTable(modelEmpleados);
 
-        txtId = UIKit.readOnlyField();
-        txtId.setEditable(false);
-        txtId.setFocusable(false);
-        txtNombre    = UIKit.textField();
-        txtApellido  = UIKit.textField();
-        txtDni       = UIKit.textField();
-        txtTelefono  = UIKit.textField();
+        lblEmptyState = new JLabel("No hay empleados registrados", SwingConstants.CENTER);
+        lblEmptyState.setFont(UIKit.BODY); lblEmptyState.setForeground(UIKit.TEXT_SECONDARY);
+        lblEmptyState.setVisible(false);
+
+        txtId = UIKit.readOnlyField(); txtId.setEditable(false); txtId.setFocusable(false);
+        txtNombre    = UIKit.textField(); txtApellido  = UIKit.textField();
+        txtDni       = UIKit.textField(); txtTelefono  = UIKit.textField();
         txtDireccion = UIKit.textField();
 
         cbCargo = new JComboBox<>();
-        cbCargo.setFont(UIKit.BODY);
-        cbCargo.setPreferredSize(new Dimension(0, 36));
+        cbCargo.setFont(UIKit.BODY); cbCargo.setPreferredSize(new Dimension(0, 36));
         cargarCargos();
 
         cbEstado = new JComboBox<>(new String[]{"Activo", "Inactivo"});
         cbEstado.setFont(UIKit.BODY);
 
+        btnNuevo      = UIKit.primaryButton("+ Nuevo Empleado");
         btnGuardar    = UIKit.primaryButton("Guardar / Actualizar");
         btnLimpiar    = UIKit.secondaryButton("Limpiar / Nuevo");
         btnDesactivar = UIKit.secondaryButton("Desactivar / Activar");
@@ -89,32 +88,27 @@ public class IFrmFichaEmpleados extends JInternalFrame {
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(
                 UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG, UIKit.SPACE_LG));
 
-        getContentPane().add(
-                UIKit.screenHeader("Ficha de Empleados", "Personal  ›  Empleados"),
-                BorderLayout.NORTH);
+        // Sección 5: título + botón primario
+        JPanel pnlTop = new JPanel(new BorderLayout()); pnlTop.setOpaque(false);
+        pnlTop.add(UIKit.screenHeader("Ficha de Empleados", "Personal  ›  Empleados"), BorderLayout.WEST);
+        pnlTop.add(btnNuevo, BorderLayout.EAST);
+        getContentPane().add(pnlTop, BorderLayout.NORTH);
 
-        JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0));
-        cuerpo.setOpaque(false);
+        JPanel cuerpo = new JPanel(new BorderLayout(UIKit.SPACE_LG, 0)); cuerpo.setOpaque(false);
 
-        // Tabla
         JPanel pnlTabla = UIKit.card();
         pnlTabla.setLayout(new BorderLayout(0, UIKit.SPACE_SM));
 
-        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, UIKit.SPACE_SM, 0));
-        pnlBusqueda.setOpaque(false);
-        pnlBusqueda.add(txtBuscar);
-        pnlBusqueda.add(btnBuscar);
+        JPanel pnlBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlBusqueda.setOpaque(false); pnlBusqueda.add(txtBuscar);
+        pnlTabla.add(UIKit.sectionHeader("Listado de Empleados", null), BorderLayout.NORTH);
+        pnlTabla.add(pnlBusqueda, BorderLayout.BEFORE_FIRST_LINE);
 
-        JPanel pnlHeader = new JPanel(new BorderLayout());
-        pnlHeader.setOpaque(false);
-        pnlHeader.add(UIKit.sectionHeader("Listado de Empleados", null), BorderLayout.NORTH);
-        pnlHeader.add(pnlBusqueda, BorderLayout.CENTER);
-
-        pnlTabla.add(pnlHeader, BorderLayout.NORTH);
-
+        JPanel pnlWrapper = new JPanel(new BorderLayout()); pnlWrapper.setOpaque(false);
         JScrollPane scroll = new JScrollPane(tblEmpleados);
         scroll.setBorder(BorderFactory.createLineBorder(UIKit.BORDER));
-        pnlTabla.add(scroll, BorderLayout.CENTER);
+        pnlWrapper.add(scroll, BorderLayout.CENTER); pnlWrapper.add(lblEmptyState, BorderLayout.SOUTH);
+        pnlTabla.add(pnlWrapper, BorderLayout.CENTER);
         cuerpo.add(pnlTabla, BorderLayout.CENTER);
 
         // Formulario
@@ -194,23 +188,26 @@ public class IFrmFichaEmpleados extends JInternalFrame {
 
     private void attachEvents() {
 
-        // BUSCAR
-        btnBuscar.addActionListener(e -> {
-            String texto = txtBuscar.getText().trim().toLowerCase();
-            modelEmpleados.setRowCount(0);
-            EmpleadoDAO dao = new EmpleadoDAO();
-            for (Empleado emp : dao.listar()) {
-                if (emp.nombres.toLowerCase().contains(texto)
-                        || emp.apellidos.toLowerCase().contains(texto)
-                        || emp.dni.toLowerCase().contains(texto)) {
-                    modelEmpleados.addRow(new Object[]{
-                        emp.idEmpleado, emp.nombres, emp.apellidos,
-                        emp.dni, emp.cargo, emp.telefono,
-                        emp.estado == 1 ? "Activo" : "Inactivo"
-                    });
+        // BUSCAR en tiempo real
+        txtBuscar.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override public void keyReleased(java.awt.event.KeyEvent e) {
+                String txt = txtBuscar.getText().trim().toLowerCase();
+                modelEmpleados.setRowCount(0);
+                for (Empleado emp : new EmpleadoDAO().listar()) {
+                    if (emp.nombres.toLowerCase().contains(txt)
+                            || emp.apellidos.toLowerCase().contains(txt)
+                            || emp.dni.toLowerCase().contains(txt)) {
+                        modelEmpleados.addRow(new Object[]{
+                            emp.idEmpleado, emp.nombres, emp.apellidos,
+                            emp.dni, emp.cargo, emp.telefono,
+                            emp.estado == 1 ? "Activo" : "Inactivo"
+                        });
+                    }
                 }
+                lblEmptyState.setVisible(modelEmpleados.getRowCount() == 0);
             }
         });
+        btnNuevo.addActionListener(e -> limpiar());
 
         // GUARDAR / ACTUALIZAR
         btnGuardar.addActionListener(e -> {
@@ -303,14 +300,14 @@ public class IFrmFichaEmpleados extends JInternalFrame {
 
     private void cargarTabla() {
         modelEmpleados.setRowCount(0);
-        EmpleadoDAO dao = new EmpleadoDAO();
-        for (Empleado emp : dao.listar()) {
+        for (Empleado emp : new EmpleadoDAO().listar()) {
             modelEmpleados.addRow(new Object[]{
                 emp.idEmpleado, emp.nombres, emp.apellidos,
                 emp.dni, emp.cargo, emp.telefono,
                 emp.estado == 1 ? "Activo" : "Inactivo"
             });
         }
+        lblEmptyState.setVisible(modelEmpleados.getRowCount() == 0);
     }
 
     private int obtenerIdCargo(String nombre) {
